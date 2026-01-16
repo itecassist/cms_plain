@@ -1,0 +1,372 @@
+=============================================================================
+                   SIMPLE FLAT-FILE CMS - PROJECT OVERVIEW
+=============================================================================
+
+📁 PROJECT STRUCTURE
+=============================================================================
+
+itec_cms_plain/
+│
+├── 📄 index.php                    # Main router - serves all pages
+├── 📄 config.php                   # Configuration & settings (SECURE THIS!)
+├── 📄 functions.php                # Helper functions
+├── 📄 .htaccess                    # Apache URL routing & security
+├── 📄 .gitignore                   # Git ignore rules
+├── 📄 verify-setup.php             # Installation verification (DELETE after use)
+│
+├── 📂 admin/                       # Admin panel (password protected)
+│   ├── index.php                  # Dashboard - main admin page
+│   ├── login.php                  # Login page
+│   ├── edit.php                   # Content editor with TinyMCE
+│   ├── uploads.php                # Image upload & management
+│   └── logout.php                 # Logout handler
+│
+├── 📂 template/                    # Original HTML template files
+│   ├── index.htm                  # Your template pages
+│   ├── about.html.htm
+│   ├── services.html.htm
+│   └── assets/                    # CSS, JS, images
+│       ├── css/
+│       ├── js/
+│       └── img/
+│
+├── 📂 content/                     # Edited content (JSON format)
+│   ├── .gitkeep                   # Placeholder file
+│   └── [page-name].json           # Generated after editing pages
+│
+├── 📂 uploads/                     # User-uploaded images
+│   ├── .gitkeep                   # Placeholder file
+│   └── [uploaded-files]           # Client uploaded images
+│
+├── 📂 examples/                    # Example implementations
+│   ├── demo-page.htm              # Demo page with editable zones
+│   └── index-with-editable-zones.php  # Example conversion
+│
+└── 📂 docs/                        # Documentation (these files)
+    ├── README.md                  # Complete documentation
+    ├── INSTALL.md                 # Installation guide
+    ├── QUICKSTART.md              # Quick setup guide
+    ├── CLIENT_GUIDE.md            # Client instructions
+    ├── CONVERSION_GUIDE.txt       # Template conversion examples
+    └── SUMMARY.md                 # Project summary
+
+=============================================================================
+🔑 KEY FILES EXPLAINED
+=============================================================================
+
+config.php
+----------
+• Stores admin credentials (username, password hash)
+• Defines file paths (content, uploads, templates)
+• Session configuration
+• **CRITICAL:** Change default password immediately!
+
+functions.php
+------------
+• is_logged_in() - Check authentication
+• get_content() - Retrieve edited content
+• save_content() - Save edited content
+• render_page() - Merge template + content
+• handle_upload() - Process image uploads
+• get_editable_zones() - Extract editable areas from HTML
+
+index.php
+---------
+• Main entry point for all page requests
+• Routes URLs to template files
+• Merges template HTML with JSON content
+• Displays final page to visitors
+
+.htaccess
+---------
+• URL rewriting rules
+• Security headers
+• File access restrictions
+• Directory protection
+• Cache control
+
+=============================================================================
+🎨 HOW IT WORKS
+=============================================================================
+
+1. TEMPLATE SETUP
+   Developer adds data-editable attributes to HTML:
+   <h1 data-editable="hero-title">Welcome</h1>
+
+2. CONTENT EDITING
+   Client logs in → Selects page → Edits content → Saves
+   
+3. DATA STORAGE
+   Edited content saved to: content/page-name.json
+   Format: {"hero-title": "New Welcome Text", ...}
+
+4. PAGE RENDERING
+   Visitor requests page → index.php loads template → 
+   Merges with JSON content → Outputs final HTML
+
+5. IMAGE MANAGEMENT
+   Client uploads images → Stored in uploads/ →
+   Gets unique filename → Copy path to use in content
+
+=============================================================================
+🔐 SECURITY FEATURES
+=============================================================================
+
+✓ Password hashing (bcrypt)
+✓ Session-based authentication  
+✓ Protected admin directory
+✓ File access restrictions
+✓ Upload type validation
+✓ File size limits (5MB)
+✓ Directory browsing disabled
+✓ Security headers (XSS, MIME sniffing, frame options)
+✓ PHP execution disabled in uploads
+✓ Config file access denied via .htaccess
+
+=============================================================================
+📊 DATA FLOW DIAGRAMS
+=============================================================================
+
+VISITOR FLOW:
+-------------
+                    ┌─────────────┐
+                    │   Visitor   │
+                    │  Requests   │
+                    │   Page      │
+                    └──────┬──────┘
+                           │
+                           ▼
+                    ┌─────────────┐
+                    │  index.php  │
+                    │   (Router)  │
+                    └──────┬──────┘
+                           │
+                ┌──────────┴──────────┐
+                │                     │
+                ▼                     ▼
+        ┌──────────────┐      ┌─────────────┐
+        │  Load HTML   │      │  Load JSON  │
+        │   Template   │      │   Content   │
+        └──────┬───────┘      └──────┬──────┘
+               │                     │
+               └──────────┬──────────┘
+                          │
+                          ▼
+                  ┌───────────────┐
+                  │ Merge Content │
+                  │  into Template│
+                  └───────┬───────┘
+                          │
+                          ▼
+                  ┌───────────────┐
+                  │  Output HTML  │
+                  │   to Visitor  │
+                  └───────────────┘
+
+
+ADMIN FLOW:
+----------
+                    ┌─────────────┐
+                    │   Client    │
+                    │   Logins    │
+                    └──────┬──────┘
+                           │
+                           ▼
+                  ┌────────────────┐
+                  │  Authenticate  │
+                  │   (login.php)  │
+                  └────────┬───────┘
+                           │
+                           ▼
+                  ┌────────────────┐
+                  │   Dashboard    │
+                  │  (index.php)   │
+                  └────────┬───────┘
+                           │
+                           ▼
+                  ┌────────────────┐
+                  │  Select Page   │
+                  │   to Edit      │
+                  └────────┬───────┘
+                           │
+                           ▼
+                  ┌────────────────┐
+                  │  Edit Content  │
+                  │  (edit.php)    │
+                  │  TinyMCE Editor│
+                  └────────┬───────┘
+                           │
+                           ▼
+                  ┌────────────────┐
+                  │  Save Changes  │
+                  │  to JSON File  │
+                  └────────┬───────┘
+                           │
+                           ▼
+                  ┌────────────────┐
+                  │ Content Saved  │
+                  │  Live on Site  │
+                  └────────────────┘
+
+=============================================================================
+💾 FILE FORMATS
+=============================================================================
+
+CONTENT JSON FORMAT:
+-------------------
+File: content/index.htm.json
+
+{
+    "hero-title": "Welcome to Our Gym",
+    "hero-description": "Get fit today!",
+    "service1-title": "Personal Training",
+    "service1-description": "One-on-one sessions..."
+}
+
+TEMPLATE HTML FORMAT:
+--------------------
+File: template/index.htm
+
+<!DOCTYPE html>
+<html>
+<body>
+    <h1 data-editable="hero-title">Default Title</h1>
+    <p data-editable="hero-description">Default text</p>
+</body>
+</html>
+
+=============================================================================
+🛠️ CUSTOMIZATION POINTS
+=============================================================================
+
+Easy to Modify:
+• config.php - Settings, password, paths
+• admin/edit.php - TinyMCE configuration
+• admin/index.php - Dashboard appearance
+• functions.php - Add custom functions
+• .htaccess - Security rules, caching
+
+Adding Features:
+• Content versioning - Track changes over time
+• Multi-language - Add language switcher
+• SEO fields - Meta tags, descriptions
+• Scheduled posts - Publish at specific time
+• User roles - Multiple users with permissions
+
+=============================================================================
+📈 SCALABILITY
+=============================================================================
+
+Good for:
+✓ Up to 50 pages (JSON performance is excellent)
+✓ Up to 500 images (file system handles well)
+✓ Single admin user (or small team)
+✓ Sites with occasional updates
+✓ Low to medium traffic sites
+
+Consider alternatives if:
+✗ 100+ pages requiring complex relationships
+✗ High-frequency updates (multiple times daily)
+✗ Need for complex user roles/permissions
+✗ Requiring e-commerce features
+✗ Need for comments/user-generated content
+✗ Very high traffic (10,000+ visitors/day)
+
+=============================================================================
+🔄 BACKUP STRATEGY
+=============================================================================
+
+What to Backup:
+1. content/ folder - All edited content
+2. uploads/ folder - All uploaded images
+3. config.php - Your settings
+
+Backup Methods:
+• Manual: Download via FTP
+• cPanel: Use backup wizard
+• Command: tar -czf backup.tar.gz content/ uploads/ config.php
+• Automated: Set up cron job for nightly backups
+
+Restore Process:
+1. Replace folders with backup versions
+2. Restore config.php
+3. Verify file permissions (755)
+4. Test site functionality
+
+=============================================================================
+🎓 LEARNING PATH
+=============================================================================
+
+For Clients:
+1. Read CLIENT_GUIDE.md
+2. Practice on demo page
+3. Try editing one page
+4. Learn image upload
+5. Understand what NOT to edit
+
+For Developers:
+1. Read README.md completely
+2. Review CONVERSION_GUIDE.txt
+3. Study functions.php
+4. Examine examples/ folder
+5. Test on sample project
+6. Customize for client needs
+
+=============================================================================
+📞 SUPPORT RESOURCES
+=============================================================================
+
+Included Documentation:
+• README.md - Technical reference
+• INSTALL.md - Setup instructions
+• QUICKSTART.md - Fast start guide
+• CLIENT_GUIDE.md - End user manual
+• CONVERSION_GUIDE.txt - Template examples
+• SUMMARY.md - Project overview
+
+Online Resources:
+• PHP Manual - php.net
+• TinyMCE Docs - tiny.cloud/docs
+• Apache Docs - httpd.apache.org
+• cPanel Guide - docs.cpanel.net
+
+Troubleshooting:
+1. Check PHP error logs
+2. Verify file permissions
+3. Review .htaccess configuration
+4. Test with verify-setup.php
+5. Check browser console for JS errors
+
+=============================================================================
+✅ FINAL CHECKLIST
+=============================================================================
+
+Installation:
+[ ] All files uploaded
+[ ] Folder permissions set (755)
+[ ] Admin password changed
+[ ] .htaccess created
+[ ] verify-setup.php run and deleted
+
+Configuration:
+[ ] Templates added to /template/
+[ ] Editable zones added to templates
+[ ] Tested page editing
+[ ] Tested image upload
+[ ] Backup configured
+
+Client Handoff:
+[ ] Login credentials provided
+[ ] CLIENT_GUIDE.md shared
+[ ] Brief training completed
+[ ] Emergency contact provided
+[ ] Backup procedure explained
+
+=============================================================================
+                              END OF DOCUMENT
+=============================================================================
+Version: 1.0
+Last Updated: January 2026
+PHP Requirement: 7.4+
+License: Free for commercial use
+=============================================================================

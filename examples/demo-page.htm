@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple CMS Demo Page</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        .header {
+            background: #667eea;
+            color: white;
+            padding: 15px 0;
+        }
+        .header .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .contact-info {
+            display: flex;
+            gap: 30px;
+        }
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 100px 20px;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        .hero p {
+            font-size: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        .section {
+            padding: 60px 20px;
+        }
+        .section h2 {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+        .section p {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 40px;
+            font-size: 18px;
+            color: #666;
+        }
+        .services {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+        .service-card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .service-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+        .service-card p {
+            color: #666;
+            text-align: center;
+        }
+        .bg-gray {
+            background: #f5f5f5;
+        }
+        .footer {
+            background: #333;
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto 30px;
+            text-align: left;
+        }
+        .footer h4 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+        .footer p,
+        .footer a {
+            color: #ccc;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 8px;
+        }
+        .footer a:hover {
+            color: white;
+        }
+        .copyright {
+            border-top: 1px solid #555;
+            padding-top: 20px;
+            margin-top: 20px;
+        }
+        .note {
+            background: #fff9e6;
+            border-left: 4px solid #ffd700;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 800px;
+            border-radius: 5px;
+        }
+        .note strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <div class="header">
+        <div class="container">
+            <div class="logo">
+                <strong>YOUR BUSINESS NAME</strong>
+            </div>
+            <div class="contact-info">
+                <span data-editable="header-phone">📞 1-800-555-0123</span>
+                <span data-editable="header-hours">🕐 Mon-Fri: 9AM-5PM</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- HERO SECTION -->
+    <div class="hero">
+        <h1 data-editable="hero-title">Welcome to Our Business</h1>
+        <p data-editable="hero-subtitle">We provide exceptional service and quality products to help you succeed</p>
+    </div>
+
+    <!-- ABOUT SECTION -->
+    <div class="section">
+        <div class="container">
+            <div class="note">
+                <strong>👋 This is a demo page!</strong><br>
+                All text with colorful backgrounds below are editable zones. Add <code>data-editable="name"</code> to any HTML element to make it editable through the admin panel.
+            </div>
+            
+            <h2 data-editable="about-title">About Our Company</h2>
+            <p data-editable="about-description">We've been serving our community for over 10 years, providing top-quality products and services. Our team is dedicated to excellence and customer satisfaction.</p>
+        </div>
+    </div>
+
+    <!-- SERVICES SECTION -->
+    <div class="section bg-gray">
+        <div class="container">
+            <h2 data-editable="services-title">Our Services</h2>
+            <p data-editable="services-subtitle">Choose from our range of professional services tailored to your needs</p>
+            
+            <div class="services">
+                <div class="service-card">
+                    <h3 data-editable="service1-title">Service One</h3>
+                    <p data-editable="service1-description">Professional service description goes here. Explain what you offer and why clients should choose you.</p>
+                </div>
+                
+                <div class="service-card">
+                    <h3 data-editable="service2-title">Service Two</h3>
+                    <p data-editable="service2-description">Another great service offering. Highlight the benefits and unique features that set you apart.</p>
+                </div>
+                
+                <div class="service-card">
+                    <h3 data-editable="service3-title">Service Three</h3>
+                    <p data-editable="service3-description">Your third service or product. Make it compelling and easy to understand for potential clients.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WHY CHOOSE US -->
+    <div class="section">
+        <div class="container">
+            <h2 data-editable="why-us-title">Why Choose Us?</h2>
+            <p data-editable="why-us-description">We combine experience, expertise, and dedication to deliver results that exceed expectations. Our commitment to quality and customer service sets us apart from the competition.</p>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <div class="footer-content">
+            <div>
+                <h4>Contact Us</h4>
+                <p data-editable="footer-address">123 Business Street<br>City, State 12345</p>
+                <p data-editable="footer-phone">Phone: (555) 123-4567</p>
+                <p data-editable="footer-email">Email: info@yourbusiness.com</p>
+            </div>
+            
+            <div>
+                <h4>Business Hours</h4>
+                <p data-editable="footer-hours">
+                    Monday - Friday: 9:00 AM - 5:00 PM<br>
+                    Saturday: 10:00 AM - 3:00 PM<br>
+                    Sunday: Closed
+                </p>
+            </div>
+            
+            <div>
+                <h4>About</h4>
+                <p data-editable="footer-about">We are a locally owned business committed to providing excellent service to our community. Customer satisfaction is our top priority.</p>
+            </div>
+        </div>
+        
+        <div class="copyright">
+            <p data-editable="footer-copyright">© 2026 Your Business Name. All rights reserved.</p>
+        </div>
+    </div>
+    
+    <!-- INSTRUCTIONS -->
+    <div style="background: #f0f0f0; padding: 40px 20px; text-align: center;">
+        <div style="max-width: 800px; margin: 0 auto;">
+            <h3 style="color: #667eea; margin-bottom: 15px;">📝 How to Use This Demo</h3>
+            <p style="margin-bottom: 10px;">1. Save this file as <code>demo.htm</code> in your <code>/template/</code> folder</p>
+            <p style="margin-bottom: 10px;">2. Login to admin panel at <code>yoursite.com/admin/</code></p>
+            <p style="margin-bottom: 10px;">3. Click "Edit Content" on the demo page</p>
+            <p style="margin-bottom: 10px;">4. You'll see all sections with <code>data-editable</code> attributes</p>
+            <p style="margin-bottom: 20px;">5. Edit the content and see changes live!</p>
+            <p style="color: #666; font-size: 14px;">All text areas shown above are fully editable through the CMS admin panel.</p>
+        </div>
+    </div>
+</body>
+</html>

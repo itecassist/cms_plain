@@ -1,0 +1,36 @@
+# Sensitive files
+config.php
+
+# Content and uploads (client data)
+content/*.json
+uploads/*
+!uploads/.gitkeep
+!content/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.sublime-*
+
+# Logs
+*.log
+error_log
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# PHP
+vendor/
+composer.lock
+
+# Backup files
+*.backup
+backup/
