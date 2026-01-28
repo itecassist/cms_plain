@@ -1,0 +1,8 @@
+{
+    "title": "Page Title for SEO - Include Keywords Here",
+    "description": "A compelling description of your page content. Keep it between 150-160 characters for best SEO results. Include main keywords naturally.",
+    "keywords": "keyword1, keyword2, keyword3, fitness, gym",
+    "og_title": "Title for Social Media Sharing",
+    "og_description": "Description that appears when this page is shared on Facebook, Twitter, LinkedIn, etc.",
+    "og_image": "/assets/img/social-share-image.jpg"
+}

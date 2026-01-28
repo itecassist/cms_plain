@@ -1,5 +1,3 @@
-# Sensitive files
-config.php
 
 # Content and uploads (client data)
 content/*.json

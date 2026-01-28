@@ -2,12 +2,25 @@
 <html lang="zxx">
 <head>
 	<meta charset="UTF-8">
-	<title data-editable="page-title"><?php echo get_content('_global', 'page-title', 'Fitmax'); ?></title>
+	<title><?php echo htmlspecialchars($seo_data['title'] ?? SITE_NAME); ?></title>
 	<!-- =================== META =================== -->
-	<meta name="keywords" content="<?php echo get_content('_global', 'meta-keywords', ''); ?>">
-	<meta name="description" content="<?php echo get_content('_global', 'meta-description', ''); ?>">
+	<meta name="keywords" content="<?php echo htmlspecialchars($seo_data['keywords'] ?? ''); ?>">
+	<meta name="description" content="<?php echo htmlspecialchars($seo_data['description'] ?? ''); ?>">
 	<meta name="format-detection" content="telephone=no">
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	
+	<!-- Open Graph / Social Media Meta Tags -->
+	<?php if (!empty($seo_data['og_title'])): ?>
+	<meta property="og:title" content="<?php echo htmlspecialchars($seo_data['og_title']); ?>">
+	<?php endif; ?>
+	<?php if (!empty($seo_data['og_description'])): ?>
+	<meta property="og:description" content="<?php echo htmlspecialchars($seo_data['og_description']); ?>">
+	<?php endif; ?>
+	<?php if (!empty($seo_data['og_image'])): ?>
+	<meta property="og:image" content="<?php echo htmlspecialchars($seo_data['og_image']); ?>">
+	<?php endif; ?>
+	<meta property="og:type" content="website">
+	
 	<link rel="shortcut icon" href="assets/img/favicon.png">
 	<!-- =================== STYLE =================== -->
 	<link rel="stylesheet" href="assets/css/slick.min.css">

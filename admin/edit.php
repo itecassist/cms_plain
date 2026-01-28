@@ -11,27 +11,53 @@ if (!in_array($page, $pages)) {
     exit;
 }
 
-$zones = get_editable_zones($page);
-$saved_content = [];
+// Extract just the filename without path for JSON files
+$page_filename = basename($page);
 
-$content_file = CONTENT_DIR . '/' . sanitize_filename($page) . '.json';
+// Load SEO data
+$seo_file = JSON_DIR . '/' . sanitize_filename($page_filename) . '.json';
+$seo_data = [];
+if (file_exists($seo_file)) {
+    $seo_data = json_decode(file_get_contents($seo_file), true) ?? [];
+}
+
+// Load page content
+$content_file = CONTENT_DIR . '/' . sanitize_filename($page_filename) . '.json';
+$page_content = '';
 if (file_exists($content_file)) {
-    $saved_content = json_decode(file_get_contents($content_file), true) ?? [];
+    $content_data = json_decode(file_get_contents($content_file), true) ?? [];
+    $page_content = $content_data['content'] ?? '';
+}
+
+// If no saved content, try to get initial content from the page file
+if (empty($page_content) && file_exists('../' . $page_filename)) {
+    $page_content = get_page_body_content($page_filename);
 }
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
-    $content = [];
-    foreach ($_POST as $key => $value) {
-        if (strpos($key, 'zone_') === 0) {
-            $zone_name = substr($key, 5);
-            $content[$zone_name] = $value;
-        }
-    }
+    // Save SEO data
+    $seo_data = [
+        'title' => $_POST['seo_title'] ?? '',
+        'description' => $_POST['seo_description'] ?? '',
+        'keywords' => $_POST['seo_keywords'] ?? '',
+        'og_title' => $_POST['seo_og_title'] ?? '',
+        'og_description' => $_POST['seo_og_description'] ?? '',
+        'og_image' => $_POST['seo_og_image'] ?? ''
+    ];
     
-    if (save_content($page, $content)) {
-        $success = 'Content saved successfully!';
-        $saved_content = $content;
+    $seo_saved = file_put_contents($seo_file, json_encode($seo_data, JSON_PRETTY_PRINT));
+    
+    // Save page content
+    $content_data = [
+        'content' => $_POST['page_content'] ?? ''
+    ];
+    
+    $content_saved = file_put_contents($content_file, json_encode($content_data, JSON_PRETTY_PRINT));
+    
+    if ($seo_saved !== false && $content_saved !== false) {
+        $success = 'Content and SEO data saved successfully!';
+        $page_content = $content_data['content'];
     } else {
         $error = 'Failed to save content.';
     }
@@ -44,7 +70,7 @@ include 'includes/admin-header.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit: <?php echo htmlspecialchars($page); ?> - <?php echo SITE_NAME; ?></title>
+    <title>Edit: <?php echo htmlspecialchars($page_filename); ?> - <?php echo SITE_NAME; ?></title>
     
     <!-- TinyMCE from jsDelivr (no API key required) -->
     <script src="https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js"></script>
@@ -59,58 +85,8 @@ include 'includes/admin-header.php';
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: #f5f5f5;
         }
-        .header {
-            background: white;
-            padding: 20px 40px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        .header h1 {
-            font-size: 20px;
-            color: #333;
-        }
-        .header-actions {
-            display: flex;
-            gap: 10px;
-        }
-        .btn {
-            padding: 10px 20px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s;
-            border: none;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-        .btn-primary:hover {
-            background: #5568d3;
-        }
-        .btn-success {
-            background: #10b981;
-            color: white;
-        }
-        .btn-success:hover {
-            background: #059669;
-        }
-        .btn-secondary {
-            background: #e0e0e0;
-            color: #333;
-        }
-        .btn-secondary:hover {
-            background: #d0d0d0;
-        }
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 30px auto;
             padding: 0 20px;
         }
@@ -129,6 +105,46 @@ include 'includes/admin-header.php';
             color: #c33;
             border: 1px solid #f66;
         }
+        .page-header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .page-header h2 {
+            margin: 0;
+            color: #333;
+        }
+        .btn {
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-block;
+        }
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #059669;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            margin-left: 10px;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
         .editor-section {
             background: white;
             padding: 30px;
@@ -136,82 +152,66 @@ include 'includes/admin-header.php';
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
-        .zone-group {
-            margin-bottom: 30px;
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
         }
-        .zone-group:last-child {
-            margin-bottom: 0;
+        .form-group {
+            margin-bottom: 20px;
         }
-        .zone-label {
+        .form-label {
             display: block;
             font-weight: 600;
             color: #333;
-            margin-bottom: 10px;
-            font-size: 16px;
+            margin-bottom: 8px;
+            font-size: 14px;
         }
-        .zone-name {
-            display: inline-block;
-            background: #667eea;
-            color: white;
-            padding: 3px 10px;
-            border-radius: 3px;
-            font-size: 12px;
-            margin-left: 10px;
-            font-weight: normal;
-        }
-        textarea {
+        .form-control {
             width: 100%;
-            min-height: 150px;
-            padding: 12px;
+            padding: 10px 12px;
             border: 2px solid #e0e0e0;
             border-radius: 5px;
             font-size: 14px;
             font-family: inherit;
+            transition: border-color 0.3s;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        textarea.form-control {
             resize: vertical;
+            min-height: 80px;
         }
-        .no-zones {
-            text-align: center;
-            padding: 60px 20px;
+        .form-hint {
+            font-size: 12px;
             color: #666;
+            margin-top: 5px;
         }
-        .no-zones h3 {
-            margin-bottom: 15px;
-            color: #333;
+        .seo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
         }
-        .instructions {
-            background: #fff9e6;
-            border: 1px solid #ffd700;
-            padding: 20px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .instructions h3 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-        .instructions p {
-            color: #666;
-            line-height: 1.6;
-            margin-bottom: 10px;
-        }
-        .instructions code {
-            background: #f5f5f5;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: monospace;
+        @media (max-width: 768px) {
+            .seo-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     
     <div class="container">
-        <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-            <h2 style="margin: 0;">Editing: <?php echo $page === '_global' ? '⚙️ Global Settings' : htmlspecialchars($page); ?></h2>
+        <div class="page-header">
+            <h2>Editing: <?php echo htmlspecialchars($page_filename); ?></h2>
             <div>
-                <button type="submit" form="edit-form" class="btn btn-success">Save Changes</button>
-                <?php if ($page !== '_global'): ?>
-                <a href="../<?php echo htmlspecialchars(str_replace('.php', '', $page)); ?>" class="btn btn-secondary" target="_blank">Preview</a>
-                <?php endif; ?>
+                <button type="submit" form="edit-form" class="btn btn-success">💾 Save Changes</button>
+                <a href="../<?php echo htmlspecialchars(str_replace('.php', '', $page_filename)); ?>" class="btn btn-secondary" target="_blank">👁️ Preview</a>
             </div>
         </div>
         
@@ -223,61 +223,96 @@ include 'includes/admin-header.php';
             <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
         
-        <?php if ($page === '_global'): ?>
-            <div class="instructions" style="background: #e0f2fe; border-color: #0ea5e9;">
-                <h3>📝 About Global Settings</h3>
-                <p>These settings apply to <strong>all pages</strong> that use the header and footer includes. Update your contact information, social media links, and footer content here.</p>
-                <p><strong>Fields included:</strong> Phone numbers, business hours, social media URLs, footer text, copyright, and more.</p>
-            </div>
-        <?php endif; ?>
-        
-        <?php if (empty($zones)): ?>
-            <div class="instructions">
-                <h3>⚠️ No Editable Zones Found</h3>
-                <p>This page doesn't have any editable zones yet. To make content editable, you need to add <code>data-editable="zone-name"</code> attributes to HTML elements in the template file.</p>
-                <p><strong>Example:</strong></p>
-                <p><code>&lt;h1 data-editable="hero-title"&gt;Welcome to Our Gym&lt;/h1&gt;</code></p>
-                <p><code>&lt;p data-editable="hero-description"&gt;Get fit and stay healthy&lt;/p&gt;</code></p>
+        <form id="edit-form" method="POST">
+            <!-- SEO Section -->
+            <div class="editor-section">
+                <h3 class="section-title">🔍 SEO Settings</h3>
+                <div class="seo-grid">
+                    <div class="form-group">
+                        <label class="form-label">Page Title</label>
+                        <input type="text" name="seo_title" class="form-control" 
+                               value="<?php echo htmlspecialchars($seo_data['title'] ?? ''); ?>" 
+                               placeholder="Enter page title for search engines">
+                        <div class="form-hint">Recommended: 50-60 characters</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Meta Keywords</label>
+                        <input type="text" name="seo_keywords" class="form-control" 
+                               value="<?php echo htmlspecialchars($seo_data['keywords'] ?? ''); ?>" 
+                               placeholder="fitness, gym, training">
+                        <div class="form-hint">Comma-separated keywords</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Meta Description</label>
+                    <textarea name="seo_description" class="form-control" rows="3"
+                              placeholder="Brief description of the page content"><?php echo htmlspecialchars($seo_data['description'] ?? ''); ?></textarea>
+                    <div class="form-hint">Recommended: 150-160 characters</div>
+                </div>
+                
+                <h4 style="margin: 25px 0 15px 0; color: #555; font-size: 16px;">📱 Open Graph (Social Media)</h4>
+                
+                <div class="seo-grid">
+                    <div class="form-group">
+                        <label class="form-label">OG Title</label>
+                        <input type="text" name="seo_og_title" class="form-control" 
+                               value="<?php echo htmlspecialchars($seo_data['og_title'] ?? ''); ?>" 
+                               placeholder="Title when shared on social media">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">OG Image URL</label>
+                        <input type="text" name="seo_og_image" class="form-control" 
+                               value="<?php echo htmlspecialchars($seo_data['og_image'] ?? ''); ?>" 
+                               placeholder="/assets/img/og-image.jpg">
+                        <div class="form-hint">Recommended: 1200x630px</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">OG Description</label>
+                    <textarea name="seo_og_description" class="form-control" rows="2"
+                              placeholder="Description when shared on social media"><?php echo htmlspecialchars($seo_data['og_description'] ?? ''); ?></textarea>
+                </div>
             </div>
             
-            <div class="editor-section no-zones">
-                <h3>Ready to add editable zones?</h3>
-                <p>Edit the template file and add data-editable attributes to the elements you want clients to edit.</p>
+            <!-- Content Section -->
+            <div class="editor-section">
+                <h3 class="section-title">✏️ Page Content</h3>
+                <textarea name="page_content" id="page-content-editor"><?php echo htmlspecialchars($page_content); ?></textarea>
             </div>
-        <?php else: ?>
-            <form id="edit-form" method="POST">
-                <div class="editor-section">
-                    <?php foreach ($zones as $zone_name => $zone_data): ?>
-                        <div class="zone-group">
-                            <label class="zone-label">
-                                <?php echo ucwords(str_replace(['-', '_'], ' ', $zone_name)); ?>
-                                <span class="zone-name"><?php echo htmlspecialchars($zone_name); ?></span>
-                            </label>
-                            <textarea 
-                                name="zone_<?php echo htmlspecialchars($zone_name); ?>" 
-                                class="tinymce-editor"
-                            ><?php echo htmlspecialchars($saved_content[$zone_name] ?? $zone_data['content']); ?></textarea>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-                <input type="hidden" name="save" value="1">
-            </form>
-        <?php endif; ?>
+            
+            <input type="hidden" name="save" value="1">
+        </form>
     </div>
     
     <script>
-        // Initialize TinyMCE
+        // Get the base URL for loading CSS
+        const baseUrl = window.location.protocol + '//' + window.location.host;
+        
+        // Initialize TinyMCE with site CSS
         tinymce.init({
-            selector: '.tinymce-editor',
-            height: 300,
-            menubar: false,
+            selector: '#page-content-editor',
+            height: 600,
+            menubar: true,
             plugins: [
                 'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
                 'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
                 'insertdatetime', 'media', 'table', 'help', 'wordcount'
             ],
-            toolbar: 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image | removeformat | code',
-            content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; font-size: 14px; }',
+            toolbar: 'undo redo | blocks | bold italic forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media | removeformat code | preview fullscreen',
+            
+            // Import site's CSS into the editor
+            content_css: [
+                baseUrl + '/assets/css/bootstrap-grid.css',
+                baseUrl + '/assets/css/style.css'
+            ],
+            
+            // Match body styling
+            body_class: 'page-content',
+            
             automatic_uploads: true,
             file_picker_types: 'image',
             file_picker_callback: function (cb, value, meta) {
@@ -288,35 +323,34 @@ include 'includes/admin-header.php';
                     
                     input.onchange = function () {
                         var file = this.files[0];
-                        var reader = new FileReader();
+                        var formData = new FormData();
+                        formData.append('file', file);
                         
-                        reader.onload = function () {
-                            var formData = new FormData();
-                            formData.append('file', file);
-                            
-                            fetch('upload.php', {
-                                method: 'POST',
-                                body: formData
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    cb('../' + data.path, { title: file.name });
-                                } else {
-                                    alert('Upload failed: ' + data.error);
-                                }
-                            })
-                            .catch(error => {
-                                alert('Upload error: ' + error);
-                            });
-                        };
-                        
-                        reader.readAsDataURL(file);
+                        fetch('uploads.php', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                cb('../' + data.path, { title: file.name });
+                            } else {
+                                alert('Upload failed: ' + (data.error || 'Unknown error'));
+                            }
+                        })
+                        .catch(error => {
+                            alert('Upload error: ' + error);
+                        });
                     };
                     
                     input.click();
                 }
-            }
+            },
+            
+            // Enable relative URLs
+            relative_urls: true,
+            remove_script_host: true,
+            document_base_url: '../'
         });
     </script>
 </body>

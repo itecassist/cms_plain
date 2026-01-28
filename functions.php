@@ -52,11 +52,11 @@ function get_pages() {
     $pages[] = '_global';
     
     // Get PHP files in root directory (actual pages)
-    $files = glob('*.php');
+    $files = glob( '../*.php');
     
     foreach ($files as $file) {
         // Skip system files
-        if (!in_array($file, ['config.php', 'functions.php', 'verify-setup.php'])) {
+        if (!in_array($file, ['../config.php', '../functions.php', '../verify-setup.php', '../router.php', '../test.php'])) {
             $pages[] = $file;
         }
     }
@@ -121,6 +121,160 @@ function get_editable_zones($page) {
     }
     
     return $zones;
+}
+
+/**
+ * Get page body content (HTML between header and footer includes)
+ */
+function get_page_body_content($page) {
+    $file = '../' . $page;
+    
+    if (!file_exists($file)) {
+        return '';
+    }
+    
+    $content = file_get_contents($file);
+    
+    // Extract content between header and footer includes
+    // Pattern: after include 'includes/header.php' and before include 'includes/footer.php'
+    $pattern = '/include\s+[\'"]includes\/header\.php[\'"];?\s*\?>(.*?)<\?php\s+include\s+[\'"]includes\/footer\.php[\'"]/s';
+    
+    if (preg_match($pattern, $content, $matches)) {
+        $body_content = trim($matches[1]);
+        
+        // Check if body content has PHP includes for sections
+        if (strpos($body_content, 'include') !== false && strpos($body_content, 'sections/') !== false) {
+            // Extract section file paths and render them
+            preg_match_all('/include\s+[\'"]sections\/([^\'"]+)[\'"];?/i', $body_content, $section_matches);
+            
+            if (!empty($section_matches[1])) {
+                $rendered_content = '';
+                foreach ($section_matches[1] as $section_file) {
+                    $section_path = '../sections/' . $section_file;
+                    if (file_exists($section_path)) {
+                        ob_start();
+                        include $section_path;
+                        $rendered_content .= ob_get_clean();
+                    }
+                }
+                
+                // Convert relative asset paths to absolute paths
+                $rendered_content = fix_asset_paths($rendered_content);
+                
+                return $rendered_content;
+            }
+        }
+        
+        return $body_content;
+    }
+    
+    return '';
+}
+
+/**
+ * Fix relative asset paths to absolute URLs for editor
+ */
+function fix_asset_paths($content) {
+    $base_url = BASE_URL;
+    
+    // Convert src="assets/ to src="http://localhost:8000/assets/
+    $content = preg_replace('/src="assets\//', 'src="' . $base_url . '/assets/', $content);
+    
+    // Convert src='assets/ to src='http://localhost:8000/assets/
+    $content = preg_replace('/src=\'assets\//', 'src=\'' . $base_url . '/assets/', $content);
+    
+    // Convert href="assets/ to href="http://localhost:8000/assets/
+    $content = preg_replace('/href="assets\//', 'href="' . $base_url . '/assets/', $content);
+    
+    // Convert href='assets/ to href='http://localhost:8000/assets/
+    $content = preg_replace('/href=\'assets\//', 'href=\'' . $base_url . '/assets/', $content);
+    
+    // Convert url(assets/ to url(http://localhost:8000/assets/
+    $content = preg_replace('/url\(assets\//', 'url(' . $base_url . '/assets/', $content);
+    
+    // Convert style="background-image: url(assets/ patterns
+    $content = preg_replace('/url\(\s*["\']?assets\//', 'url(' . $base_url . '/assets/', $content);
+    
+    return $content;
+}
+
+/**
+ * Convert absolute URLs back to relative paths for storage
+ */
+function convert_to_relative_paths($content) {
+    $base_url = BASE_URL;
+    $escaped_base_url = preg_quote($base_url, '/');
+    
+    // Convert http://localhost:8000/assets/ to assets/
+    $content = preg_replace('/' . $escaped_base_url . '\/assets\//', 'assets/', $content);
+    
+    // Also handle with quotes
+    $content = preg_replace('/["\']' . $escaped_base_url . '\/assets\//', '"assets/', $content);
+    $content = preg_replace('/[\']' . $escaped_base_url . '\/assets\//', '\'assets/', $content);
+    
+    return $content;
+}
+
+/**
+ * Process component includes in content
+ * Replaces {{component-name}} with content from components/component-name.html or .php
+ * PHP components are executed, HTML components are included as-is
+ */
+function process_components($content) {
+    // Find all {{component-name}} patterns
+    preg_match_all('/\{\{([a-zA-Z0-9_-]+)\}\}/', $content, $matches);
+    
+    if (!empty($matches[0])) {
+        foreach ($matches[0] as $index => $placeholder) {
+            $component_name = $matches[1][$index];
+            
+            // Check for .php first, then .html
+            $component_file = null;
+            if (file_exists(COMPONENTS_DIR . '/' . $component_name . '.php')) {
+                $component_file = COMPONENTS_DIR . '/' . $component_name . '.php';
+                $is_php = true;
+            } elseif (file_exists(COMPONENTS_DIR . '/' . $component_name . '.html')) {
+                $component_file = COMPONENTS_DIR . '/' . $component_name . '.html';
+                $is_php = false;
+            }
+            
+            if ($component_file) {
+                if ($is_php) {
+                    // Execute PHP component and capture output
+                    ob_start();
+                    include $component_file;
+                    $component_content = ob_get_clean();
+                } else {
+                    // Just read HTML component
+                    $component_content = file_get_contents($component_file);
+                }
+                $content = str_replace($placeholder, $component_content, $content);
+            }
+        }
+    }
+    
+    return $content;
+}
+
+/**
+ * Get SEO data for a page
+ */
+function get_seo_data($page) {
+    $seo_file = JSON_DIR . '/' . sanitize_filename($page) . '.json';
+    
+    if (file_exists($seo_file)) {
+        return json_decode(file_get_contents($seo_file), true) ?? [];
+    }
+    
+    // Return defaults
+    return [
+        'title' => SITE_NAME,
+        'description' => '',
+        'keywords' => '',
+        'og_title' => '',
+        'og_description' => '',
+        'og_image' => ''
+    ];
 }
 
 /**
