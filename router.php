@@ -29,19 +29,20 @@ if (preg_match('#/(config|functions)\.php$#', $uri)) {
 // Remove leading slash
 $uri = ltrim($uri, '/');
 
-// If empty, serve index.php
+// Remove any trailing slash
+$uri = rtrim($uri, '/');
+
+// If empty, serve index.php (homepage)
 if (empty($uri) || $uri === 'index') {
     require __DIR__ . '/index.php';
     exit;
 }
 
-// Try to find a matching PHP file
-$php_file = __DIR__ . '/' . $uri . '.php';
-
-if (file_exists($php_file)) {
-    require $php_file;
-    exit;
-}
+// For all other pages, pass to index.php with page parameter
+// This allows index.php to determine which page to load
+$_GET['page'] = $uri;
+require __DIR__ . '/index.php';
+exit;
 
 // If no match found, return 404
 http_response_code(404);
