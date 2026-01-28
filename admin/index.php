@@ -3,6 +3,51 @@ require_once '../config.php';
 require_once '../functions.php';
 require_login();
 
+// Handle page creation
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_page'])) {
+    $new_page_name = trim($_POST['new_page_name'] ?? '');
+    
+    // Validate page name
+    if (empty($new_page_name)) {
+        $create_error = 'Page name is required.';
+    } elseif (!preg_match('/^[a-zA-Z0-9_-]+$/', $new_page_name)) {
+        $create_error = 'Page name can only contain letters, numbers, hyphens, and underscores.';
+    } else {
+        $page_name = $new_page_name . '.php';
+        $content_file = CONTENT_DIR . '/' . sanitize_filename($page_name) . '.json';
+        $seo_file = JSON_DIR . '/' . sanitize_filename($page_name) . '.json';
+        
+        // Check if page already exists
+        if (file_exists($content_file)) {
+            $create_error = 'Page already exists.';
+        } else {
+            // Create content file
+            $content_data = ['content' => '<p>Page content goes here...</p>'];
+            $content_saved = file_put_contents($content_file, json_encode($content_data, JSON_PRETTY_PRINT));
+            
+            // Create SEO file
+            $seo_data = [
+                'title' => ucfirst(str_replace('-', ' ', $new_page_name)),
+                'description' => '',
+                'keywords' => '',
+                'og_title' => '',
+                'og_description' => '',
+                'og_image' => ''
+            ];
+            $seo_saved = file_put_contents($seo_file, json_encode($seo_data, JSON_PRETTY_PRINT));
+            
+            if ($content_saved && $seo_saved) {
+                $create_success = 'Page "' . htmlspecialchars($new_page_name) . '" created successfully!';
+                // Redirect to edit the new page
+                header('Location: edit.php?page=' . urlencode($page_name));
+                exit;
+            } else {
+                $create_error = 'Failed to create page.';
+            }
+        }
+    }
+}
+
 // Handle page status changes
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_status'])) {
     $page = $_POST['page'];
@@ -156,6 +201,90 @@ include 'includes/admin-header.php';
             color: #666;
             font-size: 14px;
         }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .close {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            color: #999;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .close:hover {
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .form-hint {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .modal-footer {
+            margin-top: 25px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+        .btn-cancel {
+            background: #ccc;
+            color: #333;
+        }
+        .btn-cancel:hover {
+            background: #bbb;
+        }
     </style>
 </head>
 <body>
@@ -166,7 +295,18 @@ include 'includes/admin-header.php';
             <p>Select a page below to edit its content. You can modify text, upload images, and make changes that will appear immediately on your website. Start by editing <strong>Global Settings</strong> to update your header, footer, and contact information across all pages.</p>
         </div>
         
-        <div class="stats">
+        <?php if (isset($create_success)): ?>
+            <div class="alert alert-success" style="padding: 15px 20px; border-radius: 5px; margin-bottom: 20px; background: #d1fae5; color: #065f46; border: 1px solid #10b981;"><?php echo htmlspecialchars($create_success); ?></div>
+        <?php endif; ?>
+        
+        <?php if (isset($create_error)): ?>
+            <div class="alert alert-error" style="padding: 15px 20px; border-radius: 5px; margin-bottom: 20px; background: #fee; color: #c33; border: 1px solid #f66;"><?php echo htmlspecialchars($create_error); ?></div>
+        <?php endif; ?>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin-bottom: 0; color: #333;">Your Pages</h2>
+            <button type="button" onclick="openCreateModal()" class="btn btn-primary">➕ Create New Page</button>
+        </div>
             <div class="stat-card">
                 <div class="number"><?php echo count($pages) - 1; ?></div>
                 <div class="label">Total Pages</div>
@@ -190,7 +330,6 @@ include 'includes/admin-header.php';
         </div>
         <?php endif; ?>
         
-        <h2 style="margin-bottom: 15px; color: #333;">Your Pages</h2>
         <div class="page-grid">
             <?php foreach ($pages as $page): ?>
                 <?php if ($page === '_global') continue; // Skip global, shown above ?>
@@ -218,5 +357,45 @@ include 'includes/admin-header.php';
             <?php endforeach; ?>
         </div>
     </div>
+    
+    <!-- Create Page Modal -->
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeCreateModal()">&times;</span>
+            <div class="modal-header">➕ Create New Page</div>
+            <form method="POST">
+                <div class="form-group">
+                    <label class="form-label">Page Name</label>
+                    <input type="text" name="new_page_name" id="newPageName" class="form-control" 
+                           placeholder="e.g. gallery, testimonials, team" 
+                           pattern="[a-zA-Z0-9_-]+" 
+                           required>
+                    <div class="form-hint">Letters, numbers, hyphens, and underscores only. No spaces.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="closeCreateModal()" class="btn btn-cancel">Cancel</button>
+                    <button type="submit" name="create_page" value="1" class="btn btn-primary">Create Page</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        function openCreateModal() {
+            document.getElementById('createModal').style.display = 'block';
+            document.getElementById('newPageName').focus();
+        }
+        
+        function closeCreateModal() {
+            document.getElementById('createModal').style.display = 'none';
+        }
+        
+        window.onclick = function(event) {
+            const modal = document.getElementById('createModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
 </body>
 </html>

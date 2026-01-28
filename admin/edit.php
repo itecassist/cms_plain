@@ -3,6 +3,51 @@ require_once '../config.php';
 require_once '../functions.php';
 require_login();
 
+// Handle page creation
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_page'])) {
+    $new_page_name = trim($_POST['new_page_name'] ?? '');
+    
+    // Validate page name
+    if (empty($new_page_name)) {
+        $create_error = 'Page name is required.';
+    } elseif (!preg_match('/^[a-zA-Z0-9_-]+$/', $new_page_name)) {
+        $create_error = 'Page name can only contain letters, numbers, hyphens, and underscores.';
+    } else {
+        $page_name = $new_page_name . '.php';
+        $content_file = CONTENT_DIR . '/' . sanitize_filename($page_name) . '.json';
+        $seo_file = JSON_DIR . '/' . sanitize_filename($page_name) . '.json';
+        
+        // Check if page already exists
+        if (file_exists($content_file)) {
+            $create_error = 'Page already exists.';
+        } else {
+            // Create content file
+            $content_data = ['content' => '<p>Page content goes here...</p>'];
+            $content_saved = file_put_contents($content_file, json_encode($content_data, JSON_PRETTY_PRINT));
+            
+            // Create SEO file
+            $seo_data = [
+                'title' => ucfirst(str_replace('-', ' ', $new_page_name)),
+                'description' => '',
+                'keywords' => '',
+                'og_title' => '',
+                'og_description' => '',
+                'og_image' => ''
+            ];
+            $seo_saved = file_put_contents($seo_file, json_encode($seo_data, JSON_PRETTY_PRINT));
+            
+            if ($content_saved && $seo_saved) {
+                $create_success = 'Page "' . htmlspecialchars($new_page_name) . '" created successfully!';
+                // Redirect to edit the new page
+                header('Location: edit.php?page=' . urlencode($page_name));
+                exit;
+            } else {
+                $create_error = 'Failed to create page.';
+            }
+        }
+    }
+}
+
 $page = $_GET['page'] ?? '';
 $pages = get_pages();
 
@@ -34,8 +79,14 @@ if (empty($page_content) && file_exists('../' . $page_filename)) {
     $page_content = get_page_body_content($page_filename);
 }
 
+// Convert relative asset paths to absolute URLs for editor display
+$page_content_for_editor = fix_asset_paths($page_content);
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
+    // Convert absolute URLs back to relative paths before saving
+    $content_to_save = convert_to_relative_paths($_POST['page_content'] ?? '');
+    
     // Save SEO data
     $seo_data = [
         'title' => $_POST['seo_title'] ?? '',
@@ -50,14 +101,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
     
     // Save page content
     $content_data = [
-        'content' => $_POST['page_content'] ?? ''
+        'content' => $content_to_save
     ];
     
     $content_saved = file_put_contents($content_file, json_encode($content_data, JSON_PRETTY_PRINT));
     
     if ($seo_saved !== false && $content_saved !== false) {
         $success = 'Content and SEO data saved successfully!';
-        $page_content = $content_data['content'];
+        $page_content = $content_to_save;
+        $page_content_for_editor = fix_asset_paths($page_content);
     } else {
         $error = 'Failed to save content.';
     }
@@ -202,6 +254,62 @@ include 'includes/admin-header.php';
                 grid-template-columns: 1fr;
             }
         }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .close {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            color: #999;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .close:hover {
+            color: #333;
+        }
+        .modal-footer {
+            margin-top: 25px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+        .btn-cancel {
+            background: #ccc;
+            color: #333;
+        }
+        .btn-cancel:hover {
+            background: #bbb;
+        }
     </style>
 </head>
 <body>
@@ -210,10 +318,19 @@ include 'includes/admin-header.php';
         <div class="page-header">
             <h2>Editing: <?php echo htmlspecialchars($page_filename); ?></h2>
             <div>
+                <button type="button" onclick="openCreateModal()" class="btn btn-primary" style="background: #667eea; margin-right: 10px;">➕ Create Page</button>
                 <button type="submit" form="edit-form" class="btn btn-success">💾 Save Changes</button>
                 <a href="../<?php echo htmlspecialchars(str_replace('.php', '', $page_filename)); ?>" class="btn btn-secondary" target="_blank">👁️ Preview</a>
             </div>
         </div>
+        
+        <?php if (isset($create_success)): ?>
+            <div class="alert alert-success"><?php echo htmlspecialchars($create_success); ?></div>
+        <?php endif; ?>
+        
+        <?php if (isset($create_error)): ?>
+            <div class="alert alert-error"><?php echo htmlspecialchars($create_error); ?></div>
+        <?php endif; ?>
         
         <?php if (isset($success)): ?>
             <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
@@ -281,14 +398,52 @@ include 'includes/admin-header.php';
             <!-- Content Section -->
             <div class="editor-section">
                 <h3 class="section-title">✏️ Page Content</h3>
-                <textarea name="page_content" id="page-content-editor"><?php echo htmlspecialchars($page_content); ?></textarea>
+                <textarea name="page_content" id="page-content-editor"><?php echo htmlspecialchars($page_content_for_editor); ?></textarea>
             </div>
             
             <input type="hidden" name="save" value="1">
         </form>
     </div>
     
+    <!-- Create Page Modal -->
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeCreateModal()">&times;</span>
+            <div class="modal-header">➕ Create New Page</div>
+            <form method="POST">
+                <div class="form-group">
+                    <label class="form-label">Page Name</label>
+                    <input type="text" name="new_page_name" id="newPageName" class="form-control" 
+                           placeholder="e.g. gallery, testimonials, team" 
+                           pattern="[a-zA-Z0-9_-]+" 
+                           required>
+                    <div class="form-hint">Letters, numbers, hyphens, and underscores only. No spaces.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="closeCreateModal()" class="btn btn-cancel">Cancel</button>
+                    <button type="submit" name="create_page" value="1" class="btn btn-primary">Create Page</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
     <script>
+        function openCreateModal() {
+            document.getElementById('createModal').style.display = 'block';
+            document.getElementById('newPageName').focus();
+        }
+        
+        function closeCreateModal() {
+            document.getElementById('createModal').style.display = 'none';
+        }
+        
+        window.onclick = function(event) {
+            const modal = document.getElementById('createModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
         // Get the base URL for loading CSS
         const baseUrl = window.location.protocol + '//' + window.location.host;
         

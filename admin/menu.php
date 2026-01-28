@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'label' => $_POST['label'],
                     'url' => $_POST['url'],
                     'parent' => $_POST['parent'] ?: null,
-                    'order' => (int)$_POST['order']
+                    'order' => count($menu['items']) + 1
                 ];
                 $menu['items'][] = $new_item;
                 if (save_menu($menu)) {
@@ -39,13 +39,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
                 
+            case 'edit_item':
+                $menu = get_menu();
+                $index = (int)$_POST['index'];
+                if (isset($menu['items'][$index])) {
+                    $menu['items'][$index]['label'] = $_POST['label'];
+                    $menu['items'][$index]['url'] = $_POST['url'];
+                    $menu['items'][$index]['parent'] = $_POST['parent'] ?: null;
+                    if (save_menu($menu)) {
+                        $message = '<div class="alert alert-success">Menu item updated!</div>';
+                    }
+                }
+                break;
+                
             case 'delete_item':
                 $menu = get_menu();
                 $index = (int)$_POST['index'];
                 array_splice($menu['items'], $index, 1);
+                // Reorder remaining items
+                foreach ($menu['items'] as $i => $item) {
+                    $menu['items'][$i]['order'] = $i + 1;
+                }
                 if (save_menu($menu)) {
                     $message = '<div class="alert alert-success">Menu item deleted!</div>';
                 }
+                break;
+                
+            case 'reorder':
+                $menu = get_menu();
+                $order = json_decode($_POST['order'], true);
+                $reordered = [];
+                foreach ($order as $idx => $original_index) {
+                    if (isset($menu['items'][$original_index])) {
+                        $menu['items'][$original_index]['order'] = $idx + 1;
+                        $reordered[] = $menu['items'][$original_index];
+                    }
+                }
+                $menu['items'] = $reordered;
+                if (save_menu($menu)) {
+                    echo json_encode(['success' => true]);
+                } else {
+                    echo json_encode(['success' => false]);
+                }
+                exit;
                 break;
         }
     }
@@ -80,10 +116,13 @@ include 'includes/admin-header.php';
         .btn-primary { background: #3498db; color: white; }
         .btn-success { background: #27ae60; color: white; }
         .btn-danger { background: #e74c3c; color: white; }
+        .btn-warning { background: #f39c12; color: white; }
         .btn:hover { opacity: 0.9; }
         
-        .menu-items { list-style: none; }
-        .menu-item { background: #f8f9fa; padding: 15px; margin-bottom: 10px; border-radius: 5px; border-left: 4px solid #3498db; display: flex; justify-content: space-between; align-items: center; }
+        .menu-items { list-style: none; padding: 0; margin: 0; }
+        .menu-item { background: #f8f9fa; padding: 15px; margin-bottom: 10px; border-radius: 5px; border-left: 4px solid #3498db; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s; }
+        .menu-item:hover { background: #e9ecef; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .menu-item.dragging { opacity: 0.5; }
         .menu-item.submenu { margin-left: 30px; border-left-color: #95a5a6; }
         .menu-item-info { flex: 1; }
         .menu-item-label { font-weight: 600; color: #2c3e50; margin-bottom: 5px; }
@@ -93,9 +132,21 @@ include 'includes/admin-header.php';
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         
         #sortable-menu { min-height: 50px; }
-        .drag-handle { cursor: move; color: #95a5a6; margin-right: 10px; }
-        .dragging { opacity: 0.5; }
+        .drag-handle { cursor: move; color: #95a5a6; margin-right: 15px; font-size: 20px; user-select: none; }
+        
+        /* Modal */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: white; margin: 10% auto; padding: 30px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .modal-header { font-size: 20px; font-weight: 600; margin-bottom: 20px; color: #333; }
+        .close { float: right; font-size: 28px; font-weight: bold; color: #999; cursor: pointer; line-height: 1; }
+        .close:hover { color: #333; }
+        .modal-footer { margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px; }
+        .btn-cancel { background: #ccc; color: #333; }
+        .btn-cancel:hover { background: #bbb; }
     </style>
+    
+    <!-- SortableJS from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 <body>
 
@@ -135,70 +186,152 @@ include 'includes/admin-header.php';
                         </select>
                     </div>
                     
-                    <div class="form-group">
-                        <label>Order</label>
-                        <input type="number" name="order" value="<?php echo count($menu['items']) + 1; ?>">
-                    </div>
-                    
                     <button type="submit" class="btn btn-success">Add Menu Item</button>
                 </form>
             </div>
 
             <!-- Current Menu Structure -->
             <div class="card">
-                <h2>Current Menu</h2>
+                <h2>Current Menu <span style="font-size: 14px; color: #7f8c8d; font-weight: normal;">(Drag to reorder)</span></h2>
                 <?php if (empty($menu['items'])): ?>
                     <p style="color: #7f8c8d;">No menu items yet. Add your first item!</p>
                 <?php else: ?>
                     <ul class="menu-items" id="sortable-menu">
-                        <?php 
-                        $tree = build_menu_tree($menu['items']);
-                        function render_menu_item($item, $index, $is_submenu = false) {
-                            $class = $is_submenu ? 'menu-item submenu' : 'menu-item';
-                            echo '<li class="' . $class . '" data-index="' . $index . '">';
-                            echo '<span class="drag-handle">☰</span>';
-                            echo '<div class="menu-item-info">';
-                            echo '<div class="menu-item-label">' . htmlspecialchars($item['label']) . '</div>';
-                            echo '<div class="menu-item-url">' . htmlspecialchars($item['url']) . '</div>';
-                            echo '</div>';
-                            echo '<div class="menu-item-actions">';
-                            echo '<form method="POST" style="display: inline;">';
-                            echo '<input type="hidden" name="action" value="delete_item">';
-                            echo '<input type="hidden" name="index" value="' . $index . '">';
-                            echo '<button type="submit" class="btn btn-danger" onclick="return confirm(\'Delete this menu item?\')">Delete</button>';
-                            echo '</form>';
-                            echo '</div>';
-                            echo '</li>';
-                            
-                            if (isset($item['children'])) {
-                                foreach ($item['children'] as $child_index => $child) {
-                                    render_menu_item($child, $index + $child_index + 1, true);
-                                }
-                            }
-                        }
-                        
-                        foreach ($tree as $index => $item) {
-                            render_menu_item($item, $index);
-                        }
-                        ?>
+                        <?php foreach ($menu['items'] as $index => $item): ?>
+                        <li class="menu-item" data-index="<?php echo $index; ?>">
+                            <span class="drag-handle" title="Drag to reorder">☰</span>
+                            <div class="menu-item-info">
+                                <div class="menu-item-label"><?php echo htmlspecialchars($item['label']); ?></div>
+                                <div class="menu-item-url"><?php echo htmlspecialchars($item['url']); ?></div>
+                            </div>
+                            <div class="menu-item-actions">
+                                <button type="button" class="btn btn-warning btn-edit" 
+                                        data-index="<?php echo $index; ?>"
+                                        data-label="<?php echo htmlspecialchars($item['label']); ?>"
+                                        data-url="<?php echo htmlspecialchars($item['url']); ?>"
+                                        data-parent="<?php echo htmlspecialchars($item['parent'] ?? ''); ?>">
+                                    ✏️ Edit
+                                </button>
+                                <form method="POST" style="display: inline;">
+                                    <input type="hidden" name="action" value="delete_item">
+                                    <input type="hidden" name="index" value="<?php echo $index; ?>">
+                                    <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this menu item?')">🗑️ Delete</button>
+                                </form>
+                            </div>
+                        </li>
+                        <?php endforeach; ?>
                     </ul>
                 <?php endif; ?>
             </div>
         </div>
-
-        <!-- Quick Links -->
-        <div class="card">
-            <h2>Available Pages</h2>
-            <p style="color: #7f8c8d; margin-bottom: 15px;">Copy these URLs to add them to your menu:</p>
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
-                <?php foreach ($pages as $page): ?>
-                    <div style="background: #ecf0f1; padding: 10px; border-radius: 5px;">
-                        <strong><?php echo htmlspecialchars($page); ?></strong><br>
-                        <code style="font-size: 12px; color: #7f8c8d;"><?php echo str_replace('.php', '', $page); ?></code>
-                    </div>
-                <?php endforeach; ?>
-            </div>
+    </div>
+    
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <div class="modal-header">✏️ Edit Menu Item</div>
+            <form method="POST" id="editForm">
+                <input type="hidden" name="action" value="edit_item">
+                <input type="hidden" name="index" id="edit-index">
+                
+                <div class="form-group">
+                    <label>Menu Label</label>
+                    <input type="text" name="label" id="edit-label" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>URL (without .php)</label>
+                    <input type="text" name="url" id="edit-url" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Parent Menu (for submenu)</label>
+                    <select name="parent" id="edit-parent">
+                        <option value="">None (Top Level)</option>
+                        <?php
+                        $unique_labels = [];
+                        foreach ($menu['items'] as $item) {
+                            if (!in_array($item['label'], $unique_labels)) {
+                                echo '<option value="' . htmlspecialchars($item['label']) . '">' . htmlspecialchars($item['label']) . '</option>';
+                                $unique_labels[] = $item['label'];
+                            }
+                        }
+                        ?>
+                    </select>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" onclick="closeEditModal()" class="btn btn-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-success">Save Changes</button>
+                </div>
+            </form>
         </div>
     </div>
+    
+    <script>
+        // Initialize Sortable for drag and drop
+        const sortableList = document.getElementById('sortable-menu');
+        if (sortableList) {
+            const sortable = new Sortable(sortableList, {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'dragging',
+                onEnd: function(evt) {
+                    // Get new order
+                    const items = sortableList.querySelectorAll('.menu-item');
+                    const order = [];
+                    items.forEach(item => {
+                        order.push(parseInt(item.getAttribute('data-index')));
+                    });
+                    
+                    // Send to server
+                    fetch(window.location.href, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: 'action=reorder&order=' + encodeURIComponent(JSON.stringify(order))
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Reload page to show new order
+                            window.location.reload();
+                        }
+                    });
+                }
+            });
+        }
+        
+        // Edit functionality
+        document.querySelectorAll('.btn-edit').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const index = this.getAttribute('data-index');
+                const label = this.getAttribute('data-label');
+                const url = this.getAttribute('data-url');
+                const parent = this.getAttribute('data-parent');
+                
+                document.getElementById('edit-index').value = index;
+                document.getElementById('edit-label').value = label;
+                document.getElementById('edit-url').value = url;
+                document.getElementById('edit-parent').value = parent;
+                
+                document.getElementById('editModal').style.display = 'block';
+            });
+        });
+        
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('editModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
 </body>
 </html>

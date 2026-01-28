@@ -15,8 +15,13 @@ if ($uri !== '/' && file_exists(__DIR__ . $uri)) {
     return false;
 }
 
-// Don't route admin, assets, uploads, or content directories
-if (preg_match('#^/(admin|assets|uploads|content)/#', $uri)) {
+// Don't route admin, assets, uploads, or content directories - serve them directly
+if (preg_match('#^/(admin|assets|uploads|content)(/|$)#', $uri)) {
+    return false;
+}
+
+// Handle admin subdirectory index (e.g., /admin/ or /admin/index.php)
+if ($uri === 'admin') {
     return false;
 }
 

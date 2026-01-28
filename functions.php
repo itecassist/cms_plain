@@ -15,7 +15,7 @@ function is_logged_in() {
  */
 function require_login() {
     if (!is_logged_in()) {
-        header('Location: admin/login.php');
+        header('Location: /admin/login.php');
         exit;
     }
 }
@@ -51,14 +51,14 @@ function get_pages() {
     // Add global settings as a special page
     $pages[] = '_global';
     
-    // Get PHP files in root directory (actual pages)
-    $files = glob( '../*.php');
+    // Get all JSON files from ./content/ directory
+    // These represent the actual editable pages
+    $content_files = glob(CONTENT_DIR . '/*.php.json');
     
-    foreach ($files as $file) {
-        // Skip system files
-        if (!in_array($file, ['../config.php', '../functions.php', '../verify-setup.php', '../router.php', '../test.php'])) {
-            $pages[] = $file;
-        }
+    foreach ($content_files as $file) {
+        // Extract just the filename (e.g., "about.php.json" -> "about.php")
+        $filename = basename($file, '.json');
+        $pages[] = $filename;
     }
     
     sort($pages);
