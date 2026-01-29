@@ -1,0 +1,248 @@
+# Blog System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         BLOG SYSTEM                             │
+└─────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────┐         ┌──────────────────────┐
+│   FRONTEND PAGES     │         │   ADMIN INTERFACE    │
+├──────────────────────┤         ├──────────────────────┤
+│                      │         │                      │
+│  blog.php            │◄────────┤  admin/blog.php      │
+│  ├─ Listing          │         │  ├─ Create Post      │
+│  ├─ Search           │         │  ├─ Edit Post        │
+│  ├─ Filter           │         │  ├─ Delete Post      │
+│  └─ Pagination       │         │  └─ Statistics       │
+│                      │         │                      │
+│  blog-single.php     │◄────────┤  admin/comments.php  │
+│  ├─ Post Content     │         │  ├─ Approve          │
+│  ├─ Author Box       │         │  ├─ Reject           │
+│  ├─ Comments         │         │  ├─ Delete           │
+│  ├─ Reply Form       │         │  └─ Bulk Actions     │
+│  └─ Prev/Next Nav    │         │                      │
+│                      │         │                      │
+└──────────┬───────────┘         └──────────┬───────────┘
+           │                                │
+           └────────────┬───────────────────┘
+                        │
+                        ▼
+           ┌────────────────────────┐
+           │  blog-functions.php    │
+           │  (Database Layer)      │
+           ├────────────────────────┤
+           │                        │
+           │  Post Operations:      │
+           │  ├─ create_post()      │
+           │  ├─ update_post()      │
+           │  ├─ delete_post()      │
+           │  ├─ get_post()         │
+           │  ├─ get_posts()        │
+           │  └─ search_posts()     │
+           │                        │
+           │  Comment Operations:   │
+           │  ├─ add_comment()      │
+           │  ├─ get_comments()     │
+           │  ├─ approve_comment()  │
+           │  └─ delete_comment()   │
+           │                        │
+           │  Category/Tag Ops:     │
+           │  ├─ create_category()  │
+           │  ├─ create_tag()       │
+           │  └─ get_posts_by_*()   │
+           │                        │
+           │  Navigation:           │
+           │  ├─ get_previous()     │
+           │  └─ get_next()         │
+           │                        │
+           └────────────┬───────────┘
+                        │
+                        ▼
+           ┌────────────────────────┐
+           │   SQLite Database      │
+           │   database/blog.db     │
+           ├────────────────────────┤
+           │                        │
+           │  posts                 │
+           │  categories            │
+           │  tags                  │
+           │  post_categories       │
+           │  post_tags             │
+           │  comments              │
+           │                        │
+           └────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────┐
+│                      DATA FLOW EXAMPLE                          │
+└─────────────────────────────────────────────────────────────────┘
+
+USER VIEWS BLOG:
+/blog → blog.php → get_posts() → database/blog.db → Returns posts
+     → Renders listing with sidebar → Display to user
+
+USER VIEWS POST:
+/blog/slug → blog-single.php → get_post_by_slug() → database/blog.db
+          → get_post_comments() → Renders post + comments → Display
+
+USER SUBMITS COMMENT:
+Form POST → blog-single.php → add_comment() → Save with status='pending'
+         → Success message → "Comment awaiting approval"
+
+ADMIN APPROVES COMMENT:
+Admin clicks approve → admin/comments.php → update_comment_status()
+                    → Set status='approved' → Comment visible on site
+
+ADMIN CREATES POST:
+Admin form → admin/blog.php → create_post() → Save to database
+          → Parse categories/tags → Create relationships → Post published
+
+
+┌─────────────────────────────────────────────────────────────────┐
+│                      URL ROUTING                                │
+└─────────────────────────────────────────────────────────────────┘
+
+Request: /blog
+    ↓
+router.php → Rewrites to: /?page=blog
+    ↓
+index.php → Detects $_GET['page'] == 'blog'
+    ↓
+Includes: blog.php
+    ↓
+Renders blog listing
+
+Request: /blog/my-post-slug
+    ↓
+router.php → Rewrites to: /?page=blog/my-post-slug
+    ↓
+index.php → Detects pattern: blog/slug
+    ↓
+Sets $_GET['slug'] = 'my-post-slug'
+    ↓
+Includes: blog-single.php
+    ↓
+Renders single post
+
+
+┌─────────────────────────────────────────────────────────────────┐
+│                   COMMENT SYSTEM FLOW                           │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────┐     ┌──────────────┐     ┌──────────────┐
+│ User submits│────►│ Status:      │────►│ Admin        │
+│ comment     │     │ PENDING      │     │ moderates    │
+└─────────────┘     └──────────────┘     └──────┬───────┘
+                                                 │
+                                    ┌────────────┴────────────┐
+                                    │                         │
+                              ┌─────▼──────┐          ┌─────▼──────┐
+                              │ APPROVED   │          │ REJECTED   │
+                              │ (Visible)  │          │ (Hidden)   │
+                              └────────────┘          └────────────┘
+
+Nested Comments:
+┌──────────────────────────────────────────────────┐
+│ Comment #1 (parent_id = 0)                       │
+│   └─ Reply #2 (parent_id = 1)                    │
+│       └─ Reply #3 (parent_id = 2)                │
+│   └─ Reply #4 (parent_id = 1)                    │
+│ Comment #5 (parent_id = 0)                       │
+└──────────────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────┐
+│                   TEMPLATE STRUCTURE                            │
+└─────────────────────────────────────────────────────────────────┘
+
+Original Template        →    Dynamic Blog Page
+─────────────────────         ───────────────────────
+
+template/blog.htm        →    blog.php
+├─ Header                     ├─ includes/header.php
+├─ Post grid (static)         ├─ PHP loop over $posts
+│  ├─ Post 1                  │  ├─ <?php foreach($posts): ?>
+│  ├─ Post 2                  │  ├─ Dynamic data
+│  └─ Post 3                  │  └─ <?php endforeach; ?>
+├─ Sidebar                    ├─ Sidebar (dynamic)
+│  ├─ Search                  │  ├─ Search form
+│  ├─ Categories              │  ├─ PHP loop categories
+│  └─ Recent posts            │  └─ PHP loop recent
+└─ Footer                     └─ includes/footer.php
+
+All CSS classes preserved!
+
+
+template/single-blog.htm →    blog-single.php
+├─ Header                     ├─ includes/header.php
+├─ Post content (static)      ├─ Dynamic post data
+├─ Author box                 ├─ Gravatar + author
+├─ Navigation                 ├─ Prev/Next from DB
+├─ Comments (static)          ├─ Loop comments from DB
+│  ├─ Comment 1               │  ├─ Recursive nesting
+│  └─ Comment 2               │  └─ Reply form
+└─ Footer                     └─ includes/footer.php
+
+
+┌─────────────────────────────────────────────────────────────────┐
+│                     CUSTOMIZATION POINTS                        │
+└─────────────────────────────────────────────────────────────────┘
+
+1. POSTS PER PAGE
+   File: blog.php line 14
+   Change: $per_page = 6;
+
+2. STYLING
+   File: assets/css/blog-custom.css
+   Modify: Author box, comments, navigation
+
+3. SIDEBAR WIDGETS
+   File: blog.php or blog-single.php
+   Add: New <li class="widget"> elements
+
+4. POST LAYOUT
+   File: blog.php
+   Modify: HTML inside foreach($posts) loop
+
+5. SINGLE POST LAYOUT
+   File: blog-single.php
+   Rearrange: Post sections, comments, navigation
+
+6. COMMENT FORM
+   File: blog-single.php
+   Modify: Form fields, validation
+
+7. ADMIN INTERFACE
+   Files: admin/blog.php, admin/comments.php
+   Customize: Table columns, filters, actions
+
+
+┌─────────────────────────────────────────────────────────────────┐
+│                        SECURITY LAYERS                          │
+└─────────────────────────────────────────────────────────────────┘
+
+Input:
+┌────────────┐
+│ User Input │ → trim() → Validate → Sanitize
+└────────────┘
+
+Database:
+┌────────────┐
+│ SQL Query  │ → PDO Prepared Statements → No SQL Injection
+└────────────┘
+
+Output:
+┌────────────┐
+│ Display    │ → htmlspecialchars() → No XSS
+└────────────┘
+
+Admin:
+┌────────────┐
+│ Access     │ → Session Check → Login Required
+└────────────┘
+
+Comments:
+┌────────────┐
+│ Moderation │ → Status: pending → Admin approval
+└────────────┘
+```

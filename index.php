@@ -12,14 +12,37 @@ require_once 'functions.php';
 // Determine which page is being requested
 // From router.php: $_GET['page'] or $_SERVER['REQUEST_URI']
 $requested_page = '';
+$full_path = '';
 
 if (isset($_GET['page'])) {
+    $full_path = $_GET['page'];
     $requested_page = basename($_GET['page']);
 } else {
     // Get from REQUEST_URI and extract page name
     $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     $uri = trim($uri, '/');
+    $full_path = $uri;
     $requested_page = !empty($uri) ? basename($uri) : 'index';
+}
+
+// Check if this is a blog route
+$is_blog_listing = ($requested_page === 'blog' && strpos($full_path, '/') === false);
+$is_blog_post = false;
+
+// Check for blog post route (blog/slug)
+if (preg_match('#^blog/(.+)$#', $full_path, $matches)) {
+    $is_blog_post = true;
+    $_GET['slug'] = $matches[1];
+}
+
+// Handle blog routes
+if ($is_blog_listing || $is_blog_post) {
+    if ($is_blog_post) {
+        require 'blog-single.php';
+    } else {
+        require 'blog.php';
+    }
+    exit;
 }
 
 // Validate page name (prevent directory traversal)

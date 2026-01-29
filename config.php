@@ -13,6 +13,7 @@ define('COMPONENTS_DIR', __DIR__ . '/components');
 define('UPLOADS_DIR', __DIR__ . '/assets/img');
 define('TEMPLATE_DIR', __DIR__ . '/template');
 define('JSON_DIR', __DIR__ . '/json');
+define('DATABASE_DIR', __DIR__ . '/database');
 
 // Site settings
 define('SITE_NAME', 'Simple CMS');
@@ -37,6 +38,12 @@ if (!file_exists(UPLOADS_DIR)) {
 if (!file_exists(JSON_DIR)) {
     mkdir(JSON_DIR, 0755, true);
 }
+if (!file_exists(DATABASE_DIR)) {
+    mkdir(DATABASE_DIR, 0755, true);
+}
 
 // Start session
 session_start();
+
+// Include blog functions
+require_once __DIR__ . '/blog-functions.php';

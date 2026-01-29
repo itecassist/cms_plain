@@ -44,6 +44,18 @@
         .form-group label { display: block; margin-bottom: 5px; font-weight: 500; color: #2c3e50; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
         .form-group textarea { min-height: 100px; font-family: inherit; }
+        
+        .admin-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .admin-table thead { background: #667eea; color: white; }
+        .admin-table th { padding: 15px; text-align: left; font-weight: 600; }
+        .admin-table td { padding: 15px; border-bottom: 1px solid #f0f0f0; }
+        .admin-table tbody tr:hover { background: #f9f9f9; }
+        .admin-table .actions { white-space: nowrap; }
+        
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .page-header h1 { font-size: 28px; color: #2c3e50; }
+        
+        .admin-content { max-width: 1400px; margin: 40px auto; padding: 0 20px; }
     </style>
 </head>
 <body>
@@ -58,7 +70,10 @@
         <nav class="admin-nav">
             <ul>
                 <li><a href="index.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'index.php') ? 'active' : ''; ?>">Dashboard</a></li>
-                <li><a href="edit.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'edit.php') ? 'active' : ''; ?>">Edit Content</a></li>
+                <li><a href="edit.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'edit.php') ? 'active' : ''; ?>">Content</a></li>
+                <li><a href="blog.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'blog.php') ? 'active' : ''; ?>">Blog</a></li>
+                <li><a href="comments.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'comments.php') ? 'active' : ''; ?>">Comments</a></li>
+                <li><a href="components.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'components.php') ? 'active' : ''; ?>">Components</a></li>
                 <li><a href="menu.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'menu.php') ? 'active' : ''; ?>">Menu</a></li>
                 <li><a href="uploads.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'uploads.php') ? 'active' : ''; ?>">Uploads</a></li>
             </ul>

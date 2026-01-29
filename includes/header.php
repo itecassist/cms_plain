@@ -21,12 +21,17 @@
 	<?php endif; ?>
 	<meta property="og:type" content="website">
 	
-	<link rel="shortcut icon" href="assets/img/favicon.png">
+	<link rel="shortcut icon" href="/assets/img/favicon.png">
 	<!-- =================== STYLE =================== -->
-	<link rel="stylesheet" href="assets/css/slick.min.css">
-	<link rel="stylesheet" href="assets/css/bootstrap-grid.css">
-	<link rel="stylesheet" href="assets/css/font-awesome.min.css">
-	<link rel="stylesheet" href="assets/css/style.css">
+	<link rel="stylesheet" href="/assets/css/slick.min.css">
+	<link rel="stylesheet" href="/assets/css/bootstrap-grid.css">
+	<link rel="stylesheet" href="/assets/css/font-awesome.min.css">
+	<link rel="stylesheet" href="/assets/css/style.css">
+	<?php if (isset($custom_css) && is_array($custom_css)): ?>
+		<?php foreach ($custom_css as $css_file): ?>
+			<link rel="stylesheet" href="<?php echo htmlspecialchars($css_file); ?>">
+		<?php endforeach; ?>
+	<?php endif; ?>
 </head>
 
 <body id="home">
@@ -77,7 +82,7 @@
 		<div class="header-menu">
 			<div class="container">
 				<div class="header-logo">
-					<a href="index.html.htm" class="logo"><img src="assets/img/logo.svg" alt="logo"></a>
+					<a href="index.html.htm" class="logo"><img src="/assets/img/logo.svg" alt="logo"></a>
 				</div>
 				<nav class="nav-menu">
 					<ul class="nav-list">

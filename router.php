@@ -43,8 +43,8 @@ if (empty($uri) || $uri === 'index') {
     exit;
 }
 
-// For all other pages, pass to index.php with page parameter
-// This allows index.php to determine which page to load
+// For all other pages (including blog routes), pass to index.php with page parameter
+// index.php will handle blog detection and routing
 $_GET['page'] = $uri;
 require __DIR__ . '/index.php';
 exit;

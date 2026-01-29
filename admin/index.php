@@ -6,7 +6,7 @@ require_login();
 // Handle page creation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_page'])) {
     $new_page_name = trim($_POST['new_page_name'] ?? '');
-    
+
     // Validate page name
     if (empty($new_page_name)) {
         $create_error = 'Page name is required.';
@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_page'])) {
         $page_name = $new_page_name . '.php';
         $content_file = CONTENT_DIR . '/' . sanitize_filename($page_name) . '.json';
         $seo_file = JSON_DIR . '/' . sanitize_filename($page_name) . '.json';
-        
+
         // Check if page already exists
         if (file_exists($content_file)) {
             $create_error = 'Page already exists.';
@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_page'])) {
             // Create content file
             $content_data = ['content' => '<p>Page content goes here...</p>'];
             $content_saved = file_put_contents($content_file, json_encode($content_data, JSON_PRETTY_PRINT));
-            
+
             // Create SEO file
             $seo_data = [
                 'title' => ucfirst(str_replace('-', ' ', $new_page_name)),
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_page'])) {
                 'og_image' => ''
             ];
             $seo_saved = file_put_contents($seo_file, json_encode($seo_data, JSON_PRETTY_PRINT));
-            
+
             if ($content_saved && $seo_saved) {
                 $create_success = 'Page "' . htmlspecialchars($new_page_name) . '" created successfully!';
                 // Redirect to edit the new page
@@ -62,251 +62,296 @@ $pages = get_pages();
 $page_title = 'Dashboard';
 include 'includes/admin-header.php';
 ?>
-    <style>
-        .header {
-            background: white;
-            padding: 20px 40px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .header h1 {
-            font-size: 24px;
-            color: #333;
-        }
-        .header-actions {
-            display: flex;
-            gap: 15px;
-        }
-        .btn {
-            padding: 10px 20px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s;
-            border: none;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-        .btn-primary:hover {
-            background: #5568d3;
-        }
-        .btn-secondary {
-            background: #e0e0e0;
-            color: #333;
-        }
-        .btn-secondary:hover {
-            background: #d0d0d0;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
-        .page-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
-        }
-        .page-card {
-            background: white;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .page-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        .page-card h3 {
-            margin-bottom: 15px;
-            color: #333;
-            font-size: 18px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .page-card .actions {
-            display: flex;
-            gap: 10px;
-        }
-        .page-card .btn {
-            flex: 1;
-            text-align: center;
-        }
-        .status-badge {
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        .status-published {
-            background: #d4edda;
-            color: #155724;
-        }
-        .status-unpublished {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        .btn-toggle {
-            padding: 6px 12px;
-            font-size: 12px;
-            margin-top: 10px;
-        }
-        .page-card.unpublished {
-            opacity: 0.7;
-            border: 2px dashed #e74c3c;
-        }
-        .welcome {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .welcome h2 {
-            color: #333;
-            margin-bottom: 15px;
-        }
-        .welcome p {
-            color: #666;
-            line-height: 1.6;
-        }
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .stat-card {
-            background: white;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .stat-card .number {
-            font-size: 36px;
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 5px;
-        }
-        .stat-card .label {
-            color: #666;
-            font-size: 14px;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.4);
-        }
-        .modal-content {
-            background-color: white;
-            margin: 10% auto;
-            padding: 30px;
-            border-radius: 8px;
-            width: 90%;
-            max-width: 400px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        }
-        .modal-header {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: #333;
-        }
-        .close {
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            color: #999;
-            cursor: pointer;
-            line-height: 1;
-        }
-        .close:hover {
-            color: #333;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        .form-label {
-            display: block;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-        .form-control {
-            width: 100%;
-            padding: 10px 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 5px;
-            font-size: 14px;
-            font-family: inherit;
-            transition: border-color 0.3s;
-        }
-        .form-control:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .form-hint {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-        .modal-footer {
-            margin-top: 25px;
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-        .btn-primary:hover {
-            background: #5568d3;
-        }
-        .btn-cancel {
-            background: #ccc;
-            color: #333;
-        }
-        .btn-cancel:hover {
-            background: #bbb;
-        }
-    </style>
+<style>
+    .header {
+        background: white;
+        padding: 20px 40px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .header h1 {
+        font-size: 24px;
+        color: #333;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 15px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .btn-primary {
+        background: #667eea;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #5568d3;
+    }
+
+    .btn-secondary {
+        background: #e0e0e0;
+        color: #333;
+    }
+
+    .btn-secondary:hover {
+        background: #d0d0d0;
+    }
+
+    .container {
+        max-width: 1200px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
+
+    .page-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        margin-top: 30px;
+        margin-left: 30px;
+        margin-right: 30px;
+    }
+
+    .page-card {
+        background: white;
+        padding: 25px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .page-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .page-card h3 {
+        margin-bottom: 15px;
+        color: #333;
+        font-size: 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .page-card .actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .page-card .btn {
+        flex: 1;
+        text-align: center;
+    }
+
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-published {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .status-unpublished {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .btn-toggle {
+        padding: 6px 12px;
+        font-size: 12px;
+        margin-top: 10px;
+    }
+
+    .page-card.unpublished {
+        opacity: 0.7;
+        border: 2px dashed #e74c3c;
+    }
+
+    .welcome {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .welcome h2 {
+        color: #333;
+        margin-bottom: 15px;
+    }
+
+    .welcome p {
+        color: #666;
+        line-height: 1.6;
+    }
+
+    .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 25px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-card .number {
+        font-size: 36px;
+        font-weight: bold;
+        color: #667eea;
+        margin-bottom: 5px;
+    }
+
+    .stat-card .label {
+        color: #666;
+        font-size: 14px;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.4);
+    }
+
+    .modal-content {
+        background-color: white;
+        margin: 10% auto;
+        padding: 30px;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 400px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #333;
+    }
+
+    .close {
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        color: #999;
+        cursor: pointer;
+        line-height: 1;
+    }
+
+    .close:hover {
+        color: #333;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 5px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: border-color 0.3s;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    .form-hint {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+    }
+
+    .modal-footer {
+        margin-top: 25px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .btn-primary {
+        background: #667eea;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #5568d3;
+    }
+
+    .btn-cancel {
+        background: #ccc;
+        color: #333;
+    }
+
+    .btn-cancel:hover {
+        background: #bbb;
+    }
+</style>
 </head>
+
 <body>
-    
+
     <div class="container">
         <div class="welcome">
             <h2>Welcome to Your CMS</h2>
             <p>Select a page below to edit its content. You can modify text, upload images, and make changes that will appear immediately on your website. Start by editing <strong>Global Settings</strong> to update your header, footer, and contact information across all pages.</p>
         </div>
-        
+
         <?php if (isset($create_success)): ?>
             <div class="alert alert-success" style="padding: 15px 20px; border-radius: 5px; margin-bottom: 20px; background: #d1fae5; color: #065f46; border: 1px solid #10b981;"><?php echo htmlspecialchars($create_success); ?></div>
         <?php endif; ?>
-        
+
         <?php if (isset($create_error)): ?>
             <div class="alert alert-error" style="padding: 15px 20px; border-radius: 5px; margin-bottom: 20px; background: #fee; color: #c33; border: 1px solid #f66;"><?php echo htmlspecialchars($create_error); ?></div>
         <?php endif; ?>
-        
+
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h2 style="margin-bottom: 0; color: #333;">Your Pages</h2>
             <button type="button" onclick="openCreateModal()" class="btn btn-primary">➕ Create New Page</button>
         </div>
+        <div class="stats">
             <div class="stat-card">
                 <div class="number"><?php echo count($pages) - 1; ?></div>
                 <div class="label">Total Pages</div>
@@ -320,44 +365,46 @@ include 'includes/admin-header.php';
                 <div class="label">Uploaded Images</div>
             </div>
         </div>
-        
-        <!-- Global Settings Card -->
-        <?php if (in_array('_global', $pages)): ?>
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 8px; margin-bottom: 30px; color: white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+    </div>
+
+    <!-- Global Settings Card -->
+    <?php if (in_array('_global', $pages)): ?>
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 8px; margin-bottom: 30px; color: white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); margin-left: 30px; margin-right: 30px;">
             <h2 style="color: white; margin-bottom: 15px;">⚙️ Global Settings</h2>
             <p style="margin-bottom: 20px; opacity: 0.95;">Update your site-wide settings including header phone, business hours, social media links, footer information, and more. These changes appear on every page.</p>
             <a href="edit.php?page=_global" class="btn btn-success" style="background: white; color: #667eea; display: inline-block; text-decoration: none; padding: 12px 30px; border-radius: 5px; font-weight: 600;">Edit Global Settings</a>
         </div>
-        <?php endif; ?>
-        
-        <div class="page-grid">
-            <?php foreach ($pages as $page): ?>
-                <?php if ($page === '_global') continue; // Skip global, shown above ?>
-                <?php 
-                $status = get_page_status($page);
-                $is_unpublished = $status === 'unpublished';
-                ?>
-                <div class="page-card <?php echo $is_unpublished ? 'unpublished' : ''; ?>">
-                    <h3>
-                        <span><?php echo htmlspecialchars(str_replace(['.php', '-'], [' ', ' '], $page)); ?></span>
-                        <span class="status-badge status-<?php echo $status; ?>"><?php echo $status; ?></span>
-                    </h3>
-                    <div class="actions">
-                        <a href="edit.php?page=<?php echo urlencode($page); ?>" class="btn btn-primary">Edit Content</a>
-                        <a href="../<?php echo htmlspecialchars(str_replace('.php', '', $page)); ?>" class="btn btn-secondary" target="_blank">View</a>
-                    </div>
-                    <form method="POST" style="margin-top: 10px;">
-                        <input type="hidden" name="toggle_status" value="1">
-                        <input type="hidden" name="page" value="<?php echo htmlspecialchars($page); ?>">
-                        <button type="submit" class="btn btn-toggle <?php echo $is_unpublished ? 'btn-primary' : 'btn-secondary'; ?>" style="width: 100%;">
-                            <?php echo $is_unpublished ? '✓ Publish' : '✕ Unpublish'; ?>
-                        </button>
-                    </form>
+    <?php endif; ?>
+
+    <div class="page-grid">
+        <?php foreach ($pages as $page): ?>
+            <?php if ($page === '_global') continue; // Skip global, shown above 
+            ?>
+            <?php
+            $status = get_page_status($page);
+            $is_unpublished = $status === 'unpublished';
+            ?>
+            <div class="page-card <?php echo $is_unpublished ? 'unpublished' : ''; ?>">
+                <h3>
+                    <span><?php echo htmlspecialchars(str_replace(['.php', '-'], [' ', ' '], $page)); ?></span>
+                    <span class="status-badge status-<?php echo $status; ?>"><?php echo $status; ?></span>
+                </h3>
+                <div class="actions">
+                    <a href="edit.php?page=<?php echo urlencode($page); ?>" class="btn btn-primary">Edit Content</a>
+                    <a href="../<?php echo htmlspecialchars(str_replace('.php', '', $page)); ?>" class="btn btn-secondary" target="_blank">View</a>
                 </div>
-            <?php endforeach; ?>
-        </div>
+                <form method="POST" style="margin-top: 10px;">
+                    <input type="hidden" name="toggle_status" value="1">
+                    <input type="hidden" name="page" value="<?php echo htmlspecialchars($page); ?>">
+                    <button type="submit" class="btn btn-toggle <?php echo $is_unpublished ? 'btn-primary' : 'btn-secondary'; ?>" style="width: 100%;">
+                        <?php echo $is_unpublished ? '✓ Publish' : '✕ Unpublish'; ?>
+                    </button>
+                </form>
+            </div>
+        <?php endforeach; ?>
     </div>
-    
+    </div>
+
     <!-- Create Page Modal -->
     <div id="createModal" class="modal">
         <div class="modal-content">
@@ -366,10 +413,10 @@ include 'includes/admin-header.php';
             <form method="POST">
                 <div class="form-group">
                     <label class="form-label">Page Name</label>
-                    <input type="text" name="new_page_name" id="newPageName" class="form-control" 
-                           placeholder="e.g. gallery, testimonials, team" 
-                           pattern="[a-zA-Z0-9_-]+" 
-                           required>
+                    <input type="text" name="new_page_name" id="newPageName" class="form-control"
+                        placeholder="e.g. gallery, testimonials, team"
+                        pattern="[a-zA-Z0-9_-]+"
+                        required>
                     <div class="form-hint">Letters, numbers, hyphens, and underscores only. No spaces.</div>
                 </div>
                 <div class="modal-footer">
@@ -379,17 +426,17 @@ include 'includes/admin-header.php';
             </form>
         </div>
     </div>
-    
+
     <script>
         function openCreateModal() {
             document.getElementById('createModal').style.display = 'block';
             document.getElementById('newPageName').focus();
         }
-        
+
         function closeCreateModal() {
             document.getElementById('createModal').style.display = 'none';
         }
-        
+
         window.onclick = function(event) {
             const modal = document.getElementById('createModal');
             if (event.target === modal) {
@@ -398,4 +445,5 @@ include 'includes/admin-header.php';
         }
     </script>
 </body>
+
 </html>
