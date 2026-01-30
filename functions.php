@@ -4,6 +4,74 @@
  */
 
 /**
+ * Authenticate user with database
+ */
+function authenticate_user($username, $password) {
+    $db = get_db();
+    
+    try {
+        $stmt = $db->prepare("SELECT id, username, password FROM users WHERE username = ?");
+        $stmt->execute([$username]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($user && password_verify($password, $user['password'])) {
+            return $user;
+        }
+    } catch (PDOException $e) {
+        error_log("Authentication error: " . $e->getMessage());
+    }
+    
+    return false;
+}
+
+/**
+ * Get user by ID
+ */
+function get_user($user_id) {
+    $db = get_db();
+    
+    try {
+        $stmt = $db->prepare("SELECT id, username, email, created_at FROM users WHERE id = ?");
+        $stmt->execute([$user_id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Get user error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Update user password
+ */
+function update_user_password($user_id, $new_password) {
+    $db = get_db();
+    
+    try {
+        $hashed = password_hash($new_password, PASSWORD_DEFAULT);
+        $stmt = $db->prepare("UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+        return $stmt->execute([$hashed, $user_id]);
+    } catch (PDOException $e) {
+        error_log("Update password error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Update user details
+ */
+function update_user($user_id, $username, $email) {
+    $db = get_db();
+    
+    try {
+        $stmt = $db->prepare("UPDATE users SET username = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+        return $stmt->execute([$username, $email, $user_id]);
+    } catch (PDOException $e) {
+        error_log("Update user error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
  * Check if user is logged in
  */
 function is_logged_in() {

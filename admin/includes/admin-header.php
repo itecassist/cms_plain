@@ -63,6 +63,9 @@
         <div class="admin-header-top">
             <h1><a href="index.php">⚡ CMS Admin</a></h1>
             <div>
+                <?php if (isset($_SESSION['username'])): ?>
+                    <span style="margin-right: 15px; opacity: 0.9;">👤 <?php echo htmlspecialchars($_SESSION['username']); ?></span>
+                <?php endif; ?>
                 <a href="../" class="btn btn-light" target="_blank">View Site</a>
                 <a href="logout.php" class="btn btn-light">Logout</a>
             </div>
@@ -76,6 +79,8 @@
                 <li><a href="components.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'components.php') ? 'active' : ''; ?>">Components</a></li>
                 <li><a href="menu.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'menu.php') ? 'active' : ''; ?>">Menu</a></li>
                 <li><a href="uploads.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'uploads.php') ? 'active' : ''; ?>">Uploads</a></li>
+                <li><a href="settings.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'settings.php') ? 'active' : ''; ?>">Settings</a></li>
+                <li><a href="help.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'help.php') ? 'active' : ''; ?>">Help</a></li>
             </ul>
         </nav>
     </div>

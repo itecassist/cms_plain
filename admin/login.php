@@ -14,8 +14,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
     
-    if ($username === ADMIN_USERNAME && password_verify($password, ADMIN_PASSWORD)) {
+    $user = authenticate_user($username, $password);
+    
+    if ($user) {
         $_SESSION['admin_logged_in'] = true;
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['username'] = $user['username'];
         $_SESSION['login_time'] = time();
         header('Location: index.php');
         exit;

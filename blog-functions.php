@@ -4,37 +4,6 @@
  */
 
 /**
- * Get database connection
- */
-function get_db() {
-    static $db = null;
-    
-    if ($db === null) {
-        try {
-            $db_path = __DIR__ . '/database/blog.db';
-            
-            // Create database directory if it doesn't exist
-            $db_dir = dirname($db_path);
-            if (!file_exists($db_dir)) {
-                mkdir($db_dir, 0755, true);
-            }
-            
-            $db = new PDO('sqlite:' . $db_path);
-            $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-            
-            // Initialize database tables if they don't exist
-            init_blog_tables($db);
-        } catch (PDOException $e) {
-            error_log('Database connection failed: ' . $e->getMessage());
-            return null;
-        }
-    }
-    
-    return $db;
-}
-
-/**
  * Initialize blog database tables
  */
 function init_blog_tables($db) {
