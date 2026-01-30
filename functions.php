@@ -448,9 +448,9 @@ function render_menu($tree = null, $is_submenu = false) {
         $html .= '</a>';
         
         if ($has_children) {
-            $html .= '<ul>';
+            //$html .= '<ul>';
             $html .= render_menu($item['children'], true);
-            $html .= '</ul>';
+            //$html .= '</ul>';
         }
         
         $html .= '</li>';

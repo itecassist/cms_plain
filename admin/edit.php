@@ -3,6 +3,71 @@ require_once '../config.php';
 require_once '../functions.php';
 require_login();
 
+// Handle page deletion
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_page'])) {
+    $page_to_delete = $_POST['page_to_delete'] ?? '';
+    
+    if (!empty($page_to_delete)) {
+        $page_filename = basename($page_to_delete);
+        $deleted_files = [];
+        $failed_files = [];
+        
+        // Delete content file
+        $content_file = CONTENT_DIR . '/' . sanitize_filename($page_filename) . '.json';
+        if (file_exists($content_file)) {
+            if (unlink($content_file)) {
+                $deleted_files[] = 'content/' . sanitize_filename($page_filename) . '.json';
+            } else {
+                $failed_files[] = 'content/' . sanitize_filename($page_filename) . '.json';
+            }
+        }
+        
+        // Delete SEO file
+        $seo_file = JSON_DIR . '/' . sanitize_filename($page_filename) . '.json';
+        if (file_exists($seo_file)) {
+            if (unlink($seo_file)) {
+                $deleted_files[] = 'json/' . sanitize_filename($page_filename) . '.json';
+            } else {
+                $failed_files[] = 'json/' . sanitize_filename($page_filename) . '.json';
+            }
+        }
+        
+        // Delete custom PHP file if exists
+        $custom_php = '../custom/' . str_replace('.php', '', $page_filename) . '.php';
+        if (file_exists($custom_php)) {
+            if (unlink($custom_php)) {
+                $deleted_files[] = 'custom/' . str_replace('.php', '', $page_filename) . '.php';
+            } else {
+                $failed_files[] = 'custom/' . str_replace('.php', '', $page_filename) . '.php';
+            }
+        }
+        
+        // Delete custom JS file if exists
+        $custom_js = '../custom/' . str_replace('.php', '', $page_filename) . '.js';
+        if (file_exists($custom_js)) {
+            if (unlink($custom_js)) {
+                $deleted_files[] = 'custom/' . str_replace('.php', '', $page_filename) . '.js';
+            } else {
+                $failed_files[] = 'custom/' . str_replace('.php', '', $page_filename) . '.js';
+            }
+        }
+        
+        if (count($deleted_files) > 0) {
+            $delete_success = 'Page deleted successfully! Removed: ' . implode(', ', $deleted_files);
+        }
+        
+        if (count($failed_files) > 0) {
+            $delete_error = 'Failed to delete some files: ' . implode(', ', $failed_files);
+        }
+        
+        // Redirect to index after successful deletion
+        if (empty($failed_files) && !empty($deleted_files)) {
+            header('Location: index.php?deleted=' . urlencode($page_filename));
+            exit;
+        }
+    }
+}
+
 // Handle page creation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_page'])) {
     $new_page_name = trim($_POST['new_page_name'] ?? '');
@@ -321,8 +386,17 @@ include 'includes/admin-header.php';
                 <button type="button" onclick="openCreateModal()" class="btn btn-primary" style="background: #667eea; margin-right: 10px;">➕ Create Page</button>
                 <button type="submit" form="edit-form" class="btn btn-success">💾 Save Changes</button>
                 <a href="../<?php echo htmlspecialchars(str_replace('.php', '', $page_filename)); ?>" class="btn btn-secondary" target="_blank">👁️ Preview</a>
+                <button type="button" onclick="openDeleteModal()" class="btn" style="background: #e74c3c; color: white; margin-left: 10px;">🗑️ Delete Page</button>
             </div>
         </div>
+        
+        <?php if (isset($delete_success)): ?>
+            <div class="alert alert-success"><?php echo htmlspecialchars($delete_success); ?></div>
+        <?php endif; ?>
+        
+        <?php if (isset($delete_error)): ?>
+            <div class="alert alert-error"><?php echo htmlspecialchars($delete_error); ?></div>
+        <?php endif; ?>
         
         <?php if (isset($create_success)): ?>
             <div class="alert alert-success"><?php echo htmlspecialchars($create_success); ?></div>
@@ -427,6 +501,31 @@ include 'includes/admin-header.php';
         </div>
     </div>
     
+    <!-- Delete Page Modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeDeleteModal()">&times;</span>
+            <div class="modal-header" style="color: #e74c3c;">🗑️ Delete Page</div>
+            <form method="POST">
+                <p style="margin-bottom: 20px; color: #666;">Are you sure you want to delete <strong><?php echo htmlspecialchars($page_filename); ?></strong>?</p>
+                <p style="margin-bottom: 20px; color: #e74c3c; font-size: 14px;">⚠️ This will delete:</p>
+                <ul style="margin-bottom: 20px; color: #666; padding-left: 20px;">
+                    <li>Content file (./content/<?php echo htmlspecialchars($page_filename); ?>.json)</li>
+                    <li>SEO data (./json/<?php echo htmlspecialchars($page_filename); ?>.json)</li>
+                    <li>Custom PHP file (./custom/<?php echo str_replace('.php', '', htmlspecialchars($page_filename)); ?>.php) - if exists</li>
+                    <li>Custom JS file (./custom/<?php echo str_replace('.php', '', htmlspecialchars($page_filename)); ?>.js) - if exists</li>
+                </ul>
+                <p style="color: #e74c3c; font-weight: 600; font-size: 14px;">This action cannot be undone!</p>
+                <input type="hidden" name="delete_page" value="1">
+                <input type="hidden" name="page_to_delete" value="<?php echo htmlspecialchars($page_filename); ?>">
+                <div class="modal-footer">
+                    <button type="button" onclick="closeDeleteModal()" class="btn btn-cancel">Cancel</button>
+                    <button type="submit" class="btn" style="background: #e74c3c; color: white;">Delete Page</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
     <script>
         function openCreateModal() {
             document.getElementById('createModal').style.display = 'block';
@@ -437,10 +536,22 @@ include 'includes/admin-header.php';
             document.getElementById('createModal').style.display = 'none';
         }
         
+        function openDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'block';
+        }
+        
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+        }
+        
         window.onclick = function(event) {
-            const modal = document.getElementById('createModal');
-            if (event.target === modal) {
-                modal.style.display = 'none';
+            const createModal = document.getElementById('createModal');
+            const deleteModal = document.getElementById('deleteModal');
+            if (event.target === createModal) {
+                createModal.style.display = 'none';
+            }
+            if (event.target === deleteModal) {
+                deleteModal.style.display = 'none';
             }
         }
         

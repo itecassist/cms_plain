@@ -66,10 +66,10 @@
 					</ul>
 				</div>
 				<div class="header-right">
-					<form class="search-form">
+					<!-- <form class="search-form">
 						<input type="search" class="search-form__field" placeholder="Search" value="" name="s">
 						<button type="submit" class="search-form__submit"><i class="fa fa-search" aria-hidden="true"></i></button>
-					</form>
+					</form> -->
 					<ul class="social-list">
 						<li><a target="_blank" href="<?php echo get_content('_global', 'social-facebook', 'https://www.facebook.com'); ?>"><i class="fa fa-facebook" aria-hidden="true"></i></a></li>
 						<li><a target="_blank" href="<?php echo get_content('_global', 'social-twitter', 'https://twitter.com'); ?>"><i class="fa fa-twitter" aria-hidden="true"></i></a></li>

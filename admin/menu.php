@@ -198,10 +198,10 @@ include 'includes/admin-header.php';
                 <?php else: ?>
                     <ul class="menu-items" id="sortable-menu">
                         <?php foreach ($menu['items'] as $index => $item): ?>
-                        <li class="menu-item" data-index="<?php echo $index; ?>">
+                        <li class="menu-item<?php echo !empty($item['parent']) ? ' submenu' : ''; ?>" data-index="<?php echo $index; ?>">
                             <span class="drag-handle" title="Drag to reorder">☰</span>
                             <div class="menu-item-info">
-                                <div class="menu-item-label"><?php echo htmlspecialchars($item['label']); ?></div>
+                                <div class="menu-item-label"><?php echo htmlspecialchars($item['label']); ?><?php if (!empty($item['parent'])) echo ' <span style="color: #95a5a6; font-size: 12px;">(child of ' . htmlspecialchars($item['parent']) . ')</span>'; ?></div>
                                 <div class="menu-item-url"><?php echo htmlspecialchars($item['url']); ?></div>
                             </div>
                             <div class="menu-item-actions">
